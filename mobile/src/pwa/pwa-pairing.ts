@@ -1,5 +1,6 @@
 import { parsePairingCode } from '../transport/pairing'
 import { migrateLegacyHostNames } from './pwa-host-name'
+import { startQrScan } from './pwa-qr-scan'
 import type { PairingOffer } from '../../../src/shared/remote-runtime/pairing/mobile-relay-pairing-offer'
 
 const LEGACY_PAIRING_KEY = 'orca-pwa:pairing'
@@ -71,6 +72,17 @@ export function adoptPairingFromFragment(): boolean {
   return true
 }
 
+// Browsers refuse ws:// from an https page, however the link arrived.
+function pairingProblem(code: string): string | null {
+  const offer = parsePairingCode(code)
+  if (!offer) {
+    return 'That is not a valid pairing link.'
+  }
+  return location.protocol === 'https:' && offer.endpoint.startsWith('ws://')
+    ? 'This link uses ws://, which Safari blocks here. Give the server a wss:// pairing address and try its new link.'
+    : null
+}
+
 export function showPairingForm(root: HTMLElement, message?: string): void {
   root.innerHTML = ''
   root.style.cssText =
@@ -79,26 +91,72 @@ export function showPairingForm(root: HTMLElement, message?: string): void {
   title.textContent = 'Pair with Orca'
   title.style.cssText = 'font-size:22px;margin:0'
   const note = document.createElement('p')
-  note.textContent = message ?? 'Paste the pairing link from the server.'
+  note.textContent = message ?? 'Scan the QR code or paste the pairing link from the server.'
   note.style.cssText = 'margin:0;color:#aaa'
   const input = document.createElement('textarea')
   input.placeholder = 'orca://pair?code=…'
   input.rows = 5
   input.style.cssText =
     'font:16px ui-monospace,monospace;padding:10px;border-radius:8px;border:1px solid #444;background:#1a1a1a;color:#eee;width:100%;box-sizing:border-box'
+  const scanner = document.createElement('div')
+  let stopScan: (() => void) | null = null
+  const pair = (code: string): boolean => {
+    const problem = pairingProblem(code)
+    if (problem) {
+      note.textContent = problem
+      return false
+    }
+    stopScan?.()
+    savePairing(code.trim())
+    location.replace('/')
+    return true
+  }
+  const secondaryStyle =
+    'font:600 16px -apple-system,system-ui,sans-serif;padding:12px;border-radius:8px;border:1px solid #444;background:transparent;color:#eee'
+  const scan = document.createElement('button')
+  scan.textContent = 'Scan QR code'
+  scan.style.cssText = secondaryStyle
+  scan.onclick = () => {
+    scan.disabled = true
+    note.textContent = 'Point the camera at the QR code.'
+    // A QR for a server this page can't reach keeps scanning and says why, so a fixed code can follow.
+    void startQrScan(
+      scanner,
+      (text) => {
+        const problem = pairingProblem(text)
+        if (problem) {
+          note.textContent = problem
+        }
+        return problem === null
+      },
+      pair
+    )
+      .then((stop) => {
+        stopScan = stop
+      })
+      .catch(() => {
+        scan.disabled = false
+        note.textContent = 'The camera is unavailable. Allow it for this site, or paste the link.'
+      })
+  }
   const button = document.createElement('button')
   button.textContent = 'Pair'
   button.style.cssText =
     'font:600 16px -apple-system,system-ui,sans-serif;padding:12px;border-radius:8px;border:0;background:#eee;color:#111'
   button.onclick = () => {
-    if (!parsePairingCode(input.value)) {
-      note.textContent = 'That is not a valid pairing link.'
-      return
-    }
-    savePairing(input.value.trim())
-    location.replace('/')
+    pair(input.value)
   }
-  root.append(title, note, input, button)
+  root.append(title, note, scanner, scan, input, button)
+  if (readPairings().length > 0) {
+    const cancel = document.createElement('button')
+    cancel.textContent = 'Cancel'
+    cancel.style.cssText = secondaryStyle
+    cancel.onclick = () => {
+      stopScan?.()
+      location.replace('/')
+    }
+    root.append(cancel)
+  }
 }
 
 /** A page failure says nothing about the pairing, so it must not read as a request to pair again. */
