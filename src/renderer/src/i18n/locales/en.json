@@ -1116,6 +1116,16 @@
       "saving": "Saving…",
       "save": "Save formatter",
       "placeholder": "npx --no-install prettier --stdin-filepath \"${file}\""
+    },
+    "mobile": {
+      "tlsSource": {
+        "title": "TLS certificate source",
+        "description": "Serve a secure connection for browsers using a certificate fetched from this address. Orca checks it daily.",
+        "placeholder": "https://certs.example.com",
+        "save": "Save",
+        "serving": "Serving {{host}}, valid until {{date}}.",
+        "useAddress": "Use {{address}} for pairing"
+      }
     }
   },
   "menu": {

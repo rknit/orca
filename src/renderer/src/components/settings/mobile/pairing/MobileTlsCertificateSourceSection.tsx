@@ -60,7 +60,10 @@ export function MobileTlsCertificateSourceSection({
         <Input
           value={source}
           onChange={(event) => setSource(event.target.value)}
-          placeholder="https://certs.example.com"
+          placeholder={translate(
+            'settings.mobile.tlsSource.placeholder',
+            'https://certs.example.com'
+          )}
           aria-label={translate('settings.mobile.tlsSource.title', 'TLS certificate source')}
           autoCapitalize="off"
           spellCheck={false}

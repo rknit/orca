@@ -794,6 +794,7 @@ describe('MobilePane', () => {
       configurable: true,
       value: {
         mobile: {
+          getTlsCertificateSource: () => Promise.resolve({ sourceUrl: null, status: null }),
           getPairingQR: mocks.getPairingQR,
           listDevices: mocks.listDevices,
           listNetworkInterfaces: mocks.listNetworkInterfaces,
