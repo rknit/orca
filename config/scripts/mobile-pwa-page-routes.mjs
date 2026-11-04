@@ -22,6 +22,7 @@ export const MOBILE_PWA_PAGE_ROUTES = [
     '/connection-log',
     '/troubleshoot',
     '/about',
-    '/new-workspace'
+    '/new-workspace',
+    '/h/[hostId]/edit'
   ].map((pathname) => ({ pathname, grants: APP_SCREEN_GRANTS }))
 ]

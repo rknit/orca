@@ -1,5 +1,9 @@
 // Read the shell’s init.host instead of an absent web keychain; otherwise routes would show Host not found.
-import { readPageHostProfile } from '../mobile-web-shell/bridge/page-host-profile'
+import {
+  publishPageHostProfile,
+  readPageHostProfile
+} from '../mobile-web-shell/bridge/page-host-profile'
+import { savePersonalHostName } from '../pwa/pwa-host-name'
 import type { MobileRelayEndpoint } from '../../../src/shared/remote-runtime/relay/mobile-relay-credential-contract'
 import type { HostCatalogEntry, HostProfile } from './types'
 
@@ -27,10 +31,21 @@ export const removeHost = (_hostId: string): Promise<void> => Promise.resolve()
 // Recency belongs to the native host list, which this page does not show.
 export const updateLastConnected = (_hostId: string): Promise<void> => Promise.resolve()
 
+// The web app has no native host list to hold a rename; inside a native shell nothing routes here.
 export function updateHostNameAndEndpoint(
   _hostId: string,
-  _updates: { personalName?: string | null; endpoint?: string }
+  updates: { personalName?: string | null; endpoint?: string }
 ): Promise<void> {
+  const host = readPageHostProfile()
+  if (host !== null && updates.personalName !== undefined) {
+    savePersonalHostName(updates.personalName)
+    const { personalName: _previous, ...rest } = host
+    publishPageHostProfile(
+      updates.personalName === null
+        ? { ...rest, name: host.lastKnownMachineName ?? 'Host 1' }
+        : { ...rest, personalName: updates.personalName, name: updates.personalName }
+    )
+  }
   return Promise.resolve()
 }
 

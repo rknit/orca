@@ -13,6 +13,7 @@ import { recordHostDescriptorFromStatus } from '../transport/host-descriptor-rec
 import { readProbedHostStatus } from '../transport/host-status-probe-operations'
 import { connect } from '../transport/rpc-client'
 import { createStableLogicalRpcClient } from '../transport/stable-logical-rpc-client'
+import { readPersonalHostName } from './pwa-host-name'
 import { nameMedia, pickMedia, readMedia, releaseMedia } from './pwa-media'
 import { showPageFault, showPairingForm } from './pwa-pairing'
 import { readColorScheme, readInitialViewport, trackViewport } from './pwa-viewport'
@@ -76,11 +77,16 @@ export function startPwaHost(root: HTMLElement, offer: PairingOffer): void {
     connect(offer.endpoint, offer.deviceToken, offer.publicKeyB64),
     'lan'
   )
+  // iOS reopens a Home Screen app at its last URL, but the app's landing page is Home, as in native.
+  if (location.pathname === HOST_ROOT) {
+    history.replaceState(null, '', '/')
+  }
   const pathname = location.pathname
   const view = routeViewOf(MOBILE_PWA_PAGE_ROUTES, pathname, innerWidth >= 768)
   const supported = (grants: readonly string[]) => grants.filter((g) => !UNSUPPORTED_GRANTS.has(g))
 
   const machineName = localStorage.getItem(MACHINE_NAME_KEY)
+  const personalName = readPersonalHostName()
   const fail = (message: string) => {
     console.error('[pwa]', message)
     showPageFault(root, message)
@@ -104,7 +110,8 @@ export function startPwaHost(root: HTMLElement, offer: PairingOffer): void {
     host: {
       id: HOST_ID,
       // A generated-style name, so the machine name the server reports takes over as in the native app.
-      name: machineName ?? 'Host 1',
+      name: personalName ?? machineName ?? 'Host 1',
+      ...(personalName ? { personalName } : {}),
       ...(machineName ? { lastKnownMachineName: machineName } : {}),
       endpoint: offer.endpoint,
       lastConnected: Date.now()

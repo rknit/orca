@@ -212,6 +212,10 @@
     {
       "file": "app/troubleshoot.web.tsx",
       "reason": "The native screen adds rows that inspect the shell bundle cache through expo-file-system, whose web stub throws; the web app has no such cache."
+    },
+    {
+      "file": "src/transport/use-open-mobile-host-edit.web.ts",
+      "reason": "The native hook rebuilds the root stack with the host beneath the edit screen; the page has no such stack, so that navigation stops on the host screen."
     }
   ]
 }
