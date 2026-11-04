@@ -1,3 +1,4 @@
+import { readServerTlsConfig } from '../rpc/ws-tls-listener'
 import { AGENT_LAUNCH_RUNTIME_CAPABILITY } from '../../../shared/agent-launch/contracts/agent-launch-runtime-capability'
 import { ORCA_LAYOUT_OWNER_IS_MAIN } from '../../../shared/layout-owner-switch'
 import { placeUnshownLiveTerminalsBestEffort } from '../terminal/adoption/unshown-live-terminal-placement'
@@ -185,6 +186,7 @@ export class RuntimeRpcLifecycle extends RuntimeRpcWebSocketDispatch {
     if (!deviceRegistry || !e2eeKeypair) {
       throw new Error('WebSocket transport requires an initialized pairing identity')
     }
+    const tlsConfig = readServerTlsConfig(this.userDataPath)
     const wsTransport = new WebSocketTransport({
       host: options.host,
       port: options.port,
@@ -192,7 +194,8 @@ export class RuntimeRpcLifecycle extends RuntimeRpcWebSocketDispatch {
       ...(options.fallbackPort !== undefined ? { fallbackPort: options.fallbackPort } : {}),
       ...(options.preferPinnedPort ? { preferPinnedPort: true } : {}),
       ...(options.requirePinnedPort ? { requirePinnedPort: true } : {}),
-      fallbackLadder: wsFallbackPortLadder(this.wsPort)
+      fallbackLadder: wsFallbackPortLadder(this.wsPort),
+      ...(tlsConfig ? { tls: { config: tlsConfig, userDataPath: this.userDataPath } } : {})
     })
     const mobileSocketWiring = this.ensureMobileSocketWiring(deviceRegistry, e2eeKeypair)
     this.detachWebSocketWiring = mobileSocketWiring.attachTransport(wsTransport)

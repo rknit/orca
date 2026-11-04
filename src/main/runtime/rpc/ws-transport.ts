@@ -1,5 +1,7 @@
 // WebSocket transport letting mobile clients reach the Orca runtime over LAN (ws://); auth is per-device tokens, and E2EE runs above this layer.
 import { createServer as createHttpServer, type Server as HttpServer } from 'node:http'
+import type { Server as HttpsServer } from 'node:https'
+import { WsTlsListener, type ServerTlsConfig } from './ws-tls-listener'
 import { WebSocketServer, type WebSocket } from 'ws'
 import type { RpcTransport } from './transport'
 import { answerWithoutWebClient, createStaticWebClientHandler } from './static-web-client-handler'
@@ -45,6 +47,8 @@ export type WebSocketTransportOptions = {
   requirePinnedPort?: boolean
   // Deterministic rungs precede port 0 to keep fallbacks stable across reboots.
   fallbackLadder?: readonly number[]
+  // Adds a wss:// listener beside the plain one; absent leaves this transport ws:// only.
+  tls?: { config: ServerTlsConfig; userDataPath: string }
 }
 
 export class WebSocketTransport implements RpcTransport {
@@ -57,6 +61,9 @@ export class WebSocketTransport implements RpcTransport {
   private readonly preferPinnedPort: boolean
   private readonly requirePinnedPort: boolean
   private readonly fallbackLadder: readonly number[]
+  private readonly tls: WebSocketTransportOptions['tls']
+  private tlsListener: WsTlsListener | null = null
+  private tlsWss: WebSocketServer | null = null
   private persistedFallbackBindFailed = false
   private httpServer: HttpServer | null = null
   private wss: WebSocketServer | null = null
@@ -77,7 +84,8 @@ export class WebSocketTransport implements RpcTransport {
     fallbackPort,
     preferPinnedPort,
     requirePinnedPort,
-    fallbackLadder
+    fallbackLadder,
+    tls
   }: WebSocketTransportOptions) {
     this.host = host
     this.port = port
@@ -92,6 +100,7 @@ export class WebSocketTransport implements RpcTransport {
     this.preferPinnedPort = preferPinnedPort === true
     this.requirePinnedPort = requirePinnedPort === true
     this.fallbackLadder = fallbackLadder ?? []
+    this.tls = tls
   }
 
   // True when the persisted fallback was tried and refused, so the caller can drop it.
@@ -209,11 +218,13 @@ export class WebSocketTransport implements RpcTransport {
     // Post-upgrade WS cap cannot bound raw TCP descriptors.
     httpServer.maxConnections = WEBSOCKET_TRANSPORT_MAX_TCP_CONNECTIONS
 
-    const wss = new WebSocketServer({
-      server: httpServer,
-      maxPayload: WEBSOCKET_TRANSPORT_MAX_MESSAGE_BYTES
-    })
+    this.httpServer = httpServer
+    this.wss = this.attachWebSocketServer(httpServer)
+    await this.startTlsListener()
+  }
 
+  private attachWebSocketServer(server: HttpServer | HttpsServer): WebSocketServer {
+    const wss = new WebSocketServer({ server, maxPayload: WEBSOCKET_TRANSPORT_MAX_MESSAGE_BYTES })
     wss.on('connection', (ws) => {
       if (wss.clients.size > WEBSOCKET_TRANSPORT_MAX_CONNECTIONS) {
         rejectNodeWebSocketOverCapacity(ws)
@@ -221,22 +232,56 @@ export class WebSocketTransport implements RpcTransport {
       }
       this.handleConnection(ws)
     })
+    return wss
+  }
 
-    this.httpServer = httpServer
-    this.wss = wss
+  // Loopback-only runs have no remote client to serve, and the certificate names a network address.
+  private async startTlsListener(): Promise<void> {
+    if (!this.tls || this.tlsListener || this.host === '127.0.0.1' || this.host === '::1') {
+      return
+    }
+    this.tlsListener = new WsTlsListener({
+      config: this.tls.config,
+      host: this.host,
+      userDataPath: this.tls.userDataPath,
+      requestListener: this.staticRoot
+        ? createStaticWebClientHandler(this.staticRoot)
+        : answerWithoutWebClient,
+      onServerListening: (server) => {
+        server.maxConnections = WEBSOCKET_TRANSPORT_MAX_TCP_CONNECTIONS
+        this.tlsWss = this.attachWebSocketServer(server)
+      }
+    })
+    await this.tlsListener.start()
   }
 
   async stop(): Promise<void> {
     const wss = this.wss
     const httpServer = this.httpServer
+    const tlsServer = this.tlsListener?.stop() ?? null
+    const tlsWss = this.tlsWss
     this.wss = null
     this.httpServer = null
-    await stopNodeWebSocketTransport({
-      wss,
-      httpServer,
-      heartbeat: this.heartbeat,
-      heartbeatConnections: this.heartbeatConnections
-    })
+    this.tlsListener = null
+    this.tlsWss = null
+    await Promise.all([
+      stopNodeWebSocketTransport({
+        wss,
+        httpServer,
+        heartbeat: this.heartbeat,
+        heartbeatConnections: this.heartbeatConnections
+      }),
+      ...(tlsServer
+        ? [
+            stopNodeWebSocketTransport({
+              wss: tlsWss,
+              httpServer: tlsServer,
+              heartbeat: this.heartbeat,
+              heartbeatConnections: this.heartbeatConnections
+            })
+          ]
+        : [])
+    ])
   }
 
   private handleConnection(ws: WebSocket): void {
