@@ -13,12 +13,14 @@ export function readStoredPairing(): PairingOffer | null {
 }
 
 /** A link opened in Safari carries its code in the fragment; Home Screen apps don't share Safari's storage, so they paste. */
-export function adoptPairingFromFragment(): void {
+export function adoptPairingFromFragment(): boolean {
   const code = new URLSearchParams(location.hash.slice(1)).get('pairing')
-  if (code && parsePairingCode(code)) {
-    localStorage.setItem(PAIRING_KEY, code)
-    history.replaceState(null, '', location.pathname)
+  if (!code || !parsePairingCode(code)) {
+    return false
   }
+  localStorage.setItem(PAIRING_KEY, code)
+  history.replaceState(null, '', location.pathname)
+  return true
 }
 
 export function showPairingForm(root: HTMLElement, message?: string): void {

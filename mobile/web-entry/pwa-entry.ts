@@ -8,6 +8,12 @@ import { startPwaHost } from '../src/pwa/pwa-host'
 
 const root = document.getElementById('root') ?? document.body
 adoptPairingFromFragment()
+// Pasting a link on this same site only changes the fragment, which doesn't reload the page.
+window.addEventListener('hashchange', () => {
+  if (adoptPairingFromFragment()) {
+    location.replace('/')
+  }
+})
 const offer = readStoredPairing()
 if (offer === null) {
   showPairingForm(root)
