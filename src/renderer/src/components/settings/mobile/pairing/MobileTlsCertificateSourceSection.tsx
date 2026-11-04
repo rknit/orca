@@ -19,10 +19,14 @@ export function MobileTlsCertificateSourceSection({
   const [saveError, setSaveError] = useState<string | null>(null)
 
   useEffect(() => {
-    void window.api.mobile.getTlsCertificateSource().then(({ sourceUrl, status: current }) => {
-      setSource(sourceUrl ?? '')
-      setStatus(current)
-    })
+    // Failing to read this optional setting must not take the pairing pane down with it.
+    void Promise.resolve()
+      .then(() => window.api.mobile.getTlsCertificateSource())
+      .then(({ sourceUrl, status: current }) => {
+        setSource(sourceUrl ?? '')
+        setStatus(current)
+      })
+      .catch(() => {})
   }, [])
 
   const save = useCallback(async (next: string) => {

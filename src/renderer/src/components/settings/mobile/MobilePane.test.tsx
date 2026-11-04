@@ -196,7 +196,6 @@ describe('MobilePane pairing connection mode', () => {
         mobile: {
           getPairingQR,
           listDevices: mocks.listDevices,
-          getTlsCertificateSource: () => Promise.resolve({ sourceUrl: null, status: null }),
           listNetworkInterfaces: mocks.listNetworkInterfaces,
           revokeDevice: mocks.revokeDevice
         },
@@ -795,7 +794,6 @@ describe('MobilePane', () => {
       configurable: true,
       value: {
         mobile: {
-          getTlsCertificateSource: () => Promise.resolve({ sourceUrl: null, status: null }),
           getPairingQR: mocks.getPairingQR,
           listDevices: mocks.listDevices,
           listNetworkInterfaces: mocks.listNetworkInterfaces,
@@ -904,9 +902,11 @@ describe('MobilePane', () => {
 
     await vi.waitFor(() => expect(mocks.listDevices).toHaveBeenCalledTimes(2))
     await unmountMobilePaneRoots()
+
     await act(async () => {
       resolveRefreshAfterRevoke({ devices: [] })
     })
+
     expect(mocks.toastSuccess).not.toHaveBeenCalled()
   })
 })
