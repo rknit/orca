@@ -48,6 +48,10 @@ export class RpcClientSocketSession {
 
   constructor(private readonly options: SocketSessionOptions) {
     this.socket = new WebSocket(options.endpoint)
+    // Browsers default to Blob, whose async reads could reorder frames.
+    if (typeof document !== 'undefined') {
+      this.socket.binaryType = 'arraybuffer'
+    }
     this.attachHandlers()
     this.armConnectTimeout()
   }

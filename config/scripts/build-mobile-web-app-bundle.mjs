@@ -28,7 +28,7 @@ import { MOBILE_WEB_PAGE_ROUTES } from './mobile-web-page-routes.mjs'
 const projectDir = fileURLToPath(new URL('../..', import.meta.url))
 const mobileDir = join(projectDir, 'mobile')
 const defaultAppDir = join(mobileDir, 'app')
-const entryPoint = join(mobileDir, 'web-entry', 'index.tsx')
+const entryPoint = join(mobileDir, 'web-entry', process.env.ORCA_MOBILE_WEB_ENTRY ?? 'index.tsx')
 // Use packager guard’s output directory or independent constants can drift into missing packaged bundles.
 const { MOBILE_WEB_BUNDLE_DIR: defaultOutDir } = createRequire(import.meta.url)(
   './verify-packaged-mobile-web-bundle.cjs'
@@ -214,7 +214,9 @@ export function mobileWebAppBuildOptions(routes) {
     nodePaths: [join(mobileDir, 'node_modules')],
     alias: {
       'react-native': 'react-native-web',
-      '@react-native-async-storage/async-storage': PAGE_ASYNC_STORAGE_MODULE,
+      '@react-native-async-storage/async-storage': process.env.ORCA_MOBILE_WEB_ASYNC_STORAGE
+        ? join(mobileDir, process.env.ORCA_MOBILE_WEB_ASYNC_STORAGE)
+        : PAGE_ASYNC_STORAGE_MODULE,
       zod: MOBILE_ZOD_PACKAGE
     },
     plugins: [
