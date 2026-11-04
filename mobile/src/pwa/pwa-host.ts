@@ -13,12 +13,13 @@ import { recordHostDescriptorFromStatus } from '../transport/host-descriptor-rec
 import { readProbedHostStatus } from '../transport/host-status-probe-operations'
 import { connect } from '../transport/rpc-client'
 import { createStableLogicalRpcClient } from '../transport/stable-logical-rpc-client'
+import { readAudio, startAudio, stopAudio } from './pwa-audio'
 import { readPersonalHostName } from './pwa-host-name'
 import { nameMedia, pickMedia, readMedia, releaseMedia } from './pwa-media'
 import { showPageFault, showPairingForm } from './pwa-pairing'
 import { readColorScheme, readInitialViewport, trackViewport } from './pwa-viewport'
 
-const HOST_ID = 'box'
+const HOST_ID = 'server'
 const HOST_ROOT = `/h/${HOST_ID}`
 const STORAGE_PREFIX = 'orca-pwa:page:'
 const MACHINE_NAME_KEY = 'orca-pwa:machine-name'
@@ -55,11 +56,12 @@ async function serveNativeVerb(verb: BridgeNativeVerb, params: unknown): Promise
       return releaseMedia(params)
     case 'native.media.name':
       return nameMedia(params)
-    // Dictation teardown runs even when it never started.
-    case 'native.audio.stop':
-      return { stopped: true, base64: '', droppedBytes: 0 }
     case 'native.audio.start':
+      return await startAudio(params)
     case 'native.audio.read':
+      return readAudio(params)
+    case 'native.audio.stop':
+      return stopAudio()
     case 'native.pdf.view':
       throw new Error(`${verb} is not available in the web app`)
   }

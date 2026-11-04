@@ -29,7 +29,7 @@ function pickFiles(accept: string, multiple: boolean): Promise<File[]> {
   })
 }
 
-function bytesToBase64(bytes: Uint8Array): string {
+export function bytesToBase64(bytes: Uint8Array): string {
   let binary = ''
   for (const byte of bytes) {
     binary += String.fromCharCode(byte)

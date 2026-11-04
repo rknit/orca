@@ -5,6 +5,7 @@ module.exports = ({ config }) => ({
   buildCacheProvider: { plugin: './scripts/native-build-cache.cjs' },
   ios: {
     ...config.ios,
+    // A self-built app signs under the builder's own Apple team, which can't use the published id.
     ...(process.env.ORCA_IOS_BUNDLE_ID ? { bundleIdentifier: process.env.ORCA_IOS_BUNDLE_ID } : {}),
     entitlements: { ...config.ios?.entitlements }
   },

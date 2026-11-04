@@ -8,11 +8,12 @@ import {
   Terminal,
   Wrench
 } from 'lucide-react-native'
+import { Platform } from 'react-native'
 import type { MobileSettingsMenuItem } from './mobile-settings-menu'
 import { translate } from '../i18n/mobile-i18n'
 
 export function mobileSettingsMenuItems(push: (route: string) => void): MobileSettingsMenuItem[] {
-  return [
+  const items: MobileSettingsMenuItem[] = [
     {
       id: 'appearance',
       label: translate('settings.menuItems.appearance', 'Appearance'),
@@ -62,4 +63,6 @@ export function mobileSettingsMenuItems(push: (route: string) => void): MobileSe
       onPress: () => push('/about')
     }
   ]
+  // The web app has no push, so it has nothing to configure here.
+  return Platform.OS === 'web' ? items.filter((item) => item.id !== 'notifications') : items
 }

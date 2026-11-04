@@ -216,6 +216,14 @@
     {
       "file": "src/transport/use-open-mobile-host-edit.web.ts",
       "reason": "The native hook rebuilds the root stack with the host beneath the edit screen; the page has no such stack, so that navigation stops on the host screen."
+    },
+    {
+      "file": "app/settings.web.tsx",
+      "reason": "The native screen adds an app store update check and keychain cleanup; neither exists when the server deploys the page."
+    },
+    {
+      "file": "app/about.web.tsx",
+      "reason": "expo-constants has no embedded config on the web, so the native screen would show an unknown version."
     }
   ]
 }

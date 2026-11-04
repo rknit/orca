@@ -245,42 +245,47 @@ export default function EditHostScreen() {
               returnKeyType="next"
             />
 
-            <Text style={styles.label}>{t('host.edit.address', 'Address')}</Text>
-            <TextField
-              accessibilityLabel={t('host.edit.address', 'Address')}
-              value={address}
-              onChangeText={(value) => {
-                setAddress(value)
-                setSaveError(null)
-              }}
-              placeholder="192.168.1.10:6768"
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoComplete="off"
-              keyboardType="url"
-              returnKeyType="done"
-              onSubmitEditing={() => {
-                if (canSave) {
-                  void handleSave()
-                }
-              }}
-            />
-            <Text style={styles.hint}>
-              {t(
-                'host.edit.addressHint',
-                'Accepts IP, host:port, or ws:// / wss://. A wss:// URL without a port uses 443. Bare addresses keep the current port (or 6768).'
-              )}
-            </Text>
+            {/* The web app's address comes from its pairing link. */}
+            {Platform.OS === 'web' ? null : (
+              <>
+                <Text style={styles.label}>{t('host.edit.address', 'Address')}</Text>
+                <TextField
+                  accessibilityLabel={t('host.edit.address', 'Address')}
+                  value={address}
+                  onChangeText={(value) => {
+                    setAddress(value)
+                    setSaveError(null)
+                  }}
+                  placeholder="192.168.1.10:6768"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="off"
+                  keyboardType="url"
+                  returnKeyType="done"
+                  onSubmitEditing={() => {
+                    if (canSave) {
+                      void handleSave()
+                    }
+                  }}
+                />
+                <Text style={styles.hint}>
+                  {t(
+                    'host.edit.addressHint',
+                    'Accepts IP, host:port, or ws:// / wss://. A wss:// URL without a port uses 443. Bare addresses keep the current port (or 6768).'
+                  )}
+                </Text>
 
-            {endpointEdit == null ? null : endpointEdit.kind !== 'invalid' ? (
-              <Text style={styles.preview} numberOfLines={2}>
-                {t('host.edit.connectionPreview', 'Connects to {{endpoint}}', {
-                  endpoint: endpointEdit.endpoint
-                })}
-              </Text>
-            ) : address.trim().length > 0 ? (
-              <Text style={styles.previewError}>{endpointEdit.error}</Text>
-            ) : null}
+                {endpointEdit == null ? null : endpointEdit.kind !== 'invalid' ? (
+                  <Text style={styles.preview} numberOfLines={2}>
+                    {t('host.edit.connectionPreview', 'Connects to {{endpoint}}', {
+                      endpoint: endpointEdit.endpoint
+                    })}
+                  </Text>
+                ) : address.trim().length > 0 ? (
+                  <Text style={styles.previewError}>{endpointEdit.error}</Text>
+                ) : null}
+              </>
+            )}
 
             {saveError ? <Text style={styles.errorText}>{saveError}</Text> : null}
           </ScrollView>
