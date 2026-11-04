@@ -1,8 +1,8 @@
 import {
   audioReadParamsSchema,
-  audioStartParamsSchema
+  audioStartParamsSchema,
+  BRIDGE_AUDIO_RING_MAX_BYTES
 } from '../mobile-web-shell/bridge/bridge-audio-verbs'
-import { BRIDGE_AUDIO_RING_MAX_BYTES } from '../mobile-web-shell/bridge/bridge-audio-verbs'
 import { bytesToBase64 } from './pwa-media'
 
 type Capture = {
