@@ -214,16 +214,20 @@
       "reason": "The native screen adds rows that inspect the shell bundle cache through expo-file-system, whose web stub throws; the web app has no such cache."
     },
     {
-      "file": "src/transport/use-open-mobile-host-edit.web.ts",
-      "reason": "The native hook rebuilds the root stack with the host beneath the edit screen; the page has no such stack, so that navigation stops on the host screen."
-    },
-    {
       "file": "app/settings.web.tsx",
       "reason": "The native screen adds an app store update check and keychain cleanup; neither exists when the server deploys the page."
     },
     {
       "file": "app/about.web.tsx",
       "reason": "expo-constants has no embedded config on the web, so the native screen would show an unknown version."
+    },
+    {
+      "file": "src/navigation/use-open-host-stack-route.web.ts",
+      "reason": "The native hook rebuilds the root stack with the host beneath the target; the page has no such stack, so that navigation stops on the host screen."
+    },
+    {
+      "file": "app/new-workspace.web.tsx",
+      "reason": "The native overlay mounts the WebView shell, whose native view has no web build; the page opens the server screen directly."
     }
   ]
 }
