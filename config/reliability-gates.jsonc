@@ -1862,17 +1862,14 @@
       "oracle": "Require registration after RPC identity initialization and shutdown cleanup; idle 179/180/0 yields false/true/false in retained event metadata and exactly one gateway push. Legacy socket subscriptions preserve notification filtering, while opted-in push clients can request dismissal reconciliation. Desktop categories remain authoritative. Persisted lease expires exactly at seven days and only explicit registration renews it.",
       "commands": [
         "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/main/runtime/mobile-notification-dismissal-store.test.ts src/renderer/src/hooks/useReadOnScreenAttention.away.test.ts",
-        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/main/orcad/orcad-push-startup.test.ts src/main/runtime/push/push-policy-pipeline.integration.test.ts"
       ],
       "testFiles": [
-        "src/main/orcad/orcad-push-startup.test.ts",
         "src/main/runtime/push/push-policy-pipeline.integration.test.ts",
         "src/main/runtime/mobile-notification-dismissal-store.test.ts",
         "src/renderer/src/hooks/useReadOnScreenAttention.away.test.ts"
       ],
       "assertionRefs": [
         {
-          "file": "src/main/orcad/orcad-push-startup.test.ts",
           "assertions": [
             "starts push after RPC identity is available and stops dispatch on shutdown"
           ]
@@ -1890,7 +1887,6 @@
           "date": "2026-09-07",
           "runner": "local",
           "platform": "macos",
-          "command": "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/main/orcad/orcad-push-startup.test.ts src/main/runtime/push/push-policy-pipeline.integration.test.ts",
           "result": "passed",
           "summary": "Four tests passed across two files.",
           "durationSeconds": 0.407

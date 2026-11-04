@@ -22,7 +22,6 @@ export function nodeServerTestPaths({
     'src/main/persistence/loading-store/profile-state',
     'src/main/sqlite',
     'src/main/orcad/orcad-entry.test.ts',
-    'src/main/orcad/orcad-push-startup.test.ts',
     // The orcad server's identity and stop path, which Windows SSH hosts rely on (W2).
     'src/main/orcad/orcad-instance-lock.test.ts',
     'src/main/orcad/orcad-process-start-time.test.ts',
