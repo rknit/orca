@@ -1,3 +1,4 @@
+import type { ServerTlsStatus } from '../../shared/server-tls-status'
 import type { MobileRelayStatusDetail } from '../../shared/remote-runtime/relay/mobile-relay-status'
 import type { MobilePairingConnectionMode } from '../../shared/remote-runtime/pairing/mobile-pairing-connection-mode'
 import type { RuntimePairingReach } from '../../shared/runtime-pairing-reach'
@@ -74,6 +75,13 @@ export type MobileApi = {
       lastSeenAt: number
     }[]
   }>
+  getTlsCertificateSource: () => Promise<{
+    sourceUrl: string | null
+    status: ServerTlsStatus | null
+  }>
+  setTlsCertificateSource: (args: {
+    sourceUrl: string | null
+  }) => Promise<{ status: ServerTlsStatus | null }>
   revokeDevice: (args: { deviceId: string }) => Promise<{ revoked: boolean }>
   listRuntimeAccessGrants: () => Promise<{ grants: RuntimeAccessGrant[] }>
   revokeRuntimeAccess: (args: { deviceId: string }) => Promise<{ revoked: boolean }>

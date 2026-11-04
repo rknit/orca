@@ -15,6 +15,7 @@ import { MobilePairedDevicesSection } from './pairing/MobilePairedDevicesSection
 import { MobileAutoRestoreFitSection } from './MobileAutoRestoreFitSection'
 import { MobilePairingConnectionOptions } from './pairing/MobilePairingConnectionOptions'
 import { MobilePairingSetupSection } from './pairing/MobilePairingSetupSection'
+import { MobileTlsCertificateSourceSection } from './pairing/MobileTlsCertificateSourceSection'
 import { MobileRelayMintFailureNotice } from '../../mobile/mobile-relay-mint-failure-notice'
 import { WindowsFirewallNotice } from '../../mobile/WindowsFirewallNotice'
 import { translate } from '@/i18n/i18n'
@@ -366,6 +367,8 @@ export function MobilePane(): React.JSX.Element {
         showGenerateAction={relayMintFailure == null}
         onGenerateQr={() => void generateQR({ rotate: qrDataUrl != null })}
       />
+
+      <MobileTlsCertificateSourceSection onUsePairingAddress={handleCustomAddressSelect} />
 
       {relayMintFailure != null && connectionMode === 'automatic' ? (
         <MobileRelayMintFailureNotice

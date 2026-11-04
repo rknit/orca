@@ -13,6 +13,12 @@ import {
 } from '../runtime/pairing-network-interfaces'
 import { resolveAdvertisedPairingHostname } from '../runtime/pairing-endpoint'
 import type { OrcaRuntimeRpcServer } from '../runtime/runtime-rpc'
+import {
+  readServerTlsConfig,
+  readServerTlsStatus,
+  reloadServerTls,
+  writeServerTlsSource
+} from '../runtime/rpc/ws-tls-listener'
 import type { MobileRelayStatusDetail } from '../../shared/remote-runtime/relay/mobile-relay-status'
 import { encodeMobilePairingQr, type MobilePairingQrResult } from '../runtime/mobile-pairing-qr'
 import { getWindowsDefaultRouteInterfaceNames } from '../runtime/windows-default-route-interfaces'
@@ -62,6 +68,20 @@ export function registerMobileHandlers(
   }
   const getDefaultRouteInterfaceNames =
     dependencies.getDefaultRouteInterfaceNames ?? getWindowsDefaultRouteInterfaceNames
+  ipcMain.handle('mobile:getTlsCertificateSource', () => ({
+    sourceUrl: readServerTlsConfig(app.getPath('userData'))?.sourceUrl ?? null,
+    status: readServerTlsStatus()
+  }))
+
+  ipcMain.handle(
+    'mobile:setTlsCertificateSource',
+    async (_event, args: { sourceUrl: string | null }) => {
+      writeServerTlsSource(app.getPath('userData'), args.sourceUrl)
+      await reloadServerTls()
+      return { status: readServerTlsStatus() }
+    }
+  )
+
   ipcMain.handle(
     'mobile:listNetworkInterfaces',
     async (): Promise<{ interfaces: NetworkInterface[] }> => ({

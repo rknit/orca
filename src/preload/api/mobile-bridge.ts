@@ -60,6 +60,11 @@ export const mobileApi = {
     devices: { deviceId: string; name: string; pairedAt: number; lastSeenAt: number }[]
   }> => ipcRenderer.invoke('mobile:listDevices'),
 
+  getTlsCertificateSource: () => ipcRenderer.invoke('mobile:getTlsCertificateSource'),
+
+  setTlsCertificateSource: (args: { sourceUrl: string | null }) =>
+    ipcRenderer.invoke('mobile:setTlsCertificateSource', args),
+
   revokeDevice: (args: { deviceId: string }): Promise<{ revoked: boolean }> =>
     ipcRenderer.invoke('mobile:revokeDevice', args),
 

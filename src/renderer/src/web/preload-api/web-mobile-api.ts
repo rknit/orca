@@ -4,6 +4,9 @@ import { noopUnsubscribe } from './web-storage'
 export function createWebMobileApi(): Partial<PreloadApi> {
   return {
     mobile: {
+      // A browser client has no local listener to give a certificate to.
+      getTlsCertificateSource: async () => ({ sourceUrl: null, status: null }),
+      setTlsCertificateSource: async () => ({ status: null }),
       listNetworkInterfaces: () => Promise.resolve({ interfaces: [] }),
       getPairingQR: () => Promise.resolve({ available: false }),
       getWindowsFirewallStatus: () => Promise.resolve({ supported: false }),

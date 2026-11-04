@@ -1,30 +1,33 @@
 // Optional wss:// listener beside the plain one, for clients that refuse ws:// (browsers on https pages).
-// Configured by <userData>/server-tls.json; certificates come from local files or a URL, so nothing here renews them.
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+// Certificates come from a source URL serving fullchain.pem and key.pem, so whatever renews them lives elsewhere.
+import { X509Certificate } from 'node:crypto'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer as createHttpsServer, type Server as HttpsServer } from 'node:https'
 import type { RequestListener } from 'node:http'
 import { join } from 'node:path'
 import { createSecureContext } from 'node:tls'
 import { z } from 'zod'
+import type { ServerTlsStatus } from '../../../shared/server-tls-status'
 
 const REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000
 const FETCH_TIMEOUT_MS = 30_000
+export const DEFAULT_SERVER_TLS_PORT = 6769
 
 const ServerTlsConfigSchema = z.strictObject({
-  port: z.number().int().min(1).max(65_535),
-  certFile: z.string().min(1).optional(),
-  keyFile: z.string().min(1).optional(),
-  certUrl: z.url().optional(),
-  keyUrl: z.url().optional(),
-  authorization: z.string().min(1).optional()
+  sourceUrl: z.url(),
+  port: z.number().int().min(1).max(65_535).default(DEFAULT_SERVER_TLS_PORT)
 })
 
 export type ServerTlsConfig = z.infer<typeof ServerTlsConfigSchema>
 
 type CertificatePair = { cert: string; key: string }
 
+function configPath(userDataPath: string): string {
+  return join(userDataPath, 'server-tls.json')
+}
+
 export function readServerTlsConfig(userDataPath: string): ServerTlsConfig | null {
-  const path = join(userDataPath, 'server-tls.json')
+  const path = configPath(userDataPath)
   if (!existsSync(path)) {
     return null
   }
@@ -36,11 +39,17 @@ export function readServerTlsConfig(userDataPath: string): ServerTlsConfig | nul
   }
 }
 
-async function fetchPem(url: string, authorization: string | undefined): Promise<string> {
-  const response = await fetch(url, {
-    headers: authorization ? { Authorization: authorization } : {},
-    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
-  })
+export function writeServerTlsSource(userDataPath: string, sourceUrl: string | null): void {
+  if (sourceUrl === null) {
+    rmSync(configPath(userDataPath), { force: true })
+    return
+  }
+  const config = ServerTlsConfigSchema.parse({ sourceUrl })
+  writeFileSync(configPath(userDataPath), `${JSON.stringify(config, null, 2)}\n`, { mode: 0o600 })
+}
+
+async function fetchPem(url: string): Promise<string> {
+  const response = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
   if (!response.ok) {
     throw new Error(`${url} answered ${response.status}`)
   }
@@ -56,13 +65,10 @@ function isUsable(pair: CertificatePair): boolean {
   }
 }
 
-function readCertificateFiles(certFile: string, keyFile: string): CertificatePair | null {
-  try {
-    const pair = { cert: readFileSync(certFile, 'utf8'), key: readFileSync(keyFile, 'utf8') }
-    return isUsable(pair) ? pair : null
-  } catch {
-    return null
-  }
+function describeCertificate(cert: string): { hostname: string | null; expiresAt: number } {
+  const parsed = new X509Certificate(cert)
+  const hostname = parsed.subjectAltName?.match(/DNS:([^,\s]+)/)?.[1] ?? null
+  return { hostname, expiresAt: Date.parse(parsed.validTo) }
 }
 
 export class WsTlsListener {
@@ -70,6 +76,7 @@ export class WsTlsListener {
   private refreshTimer: ReturnType<typeof setInterval> | null = null
   private installed: CertificatePair | null = null
   private stopped = false
+  private lastError: string | null = null
 
   constructor(
     private readonly options: {
@@ -83,6 +90,17 @@ export class WsTlsListener {
 
   private get cacheDir(): string {
     return join(this.options.userDataPath, 'server-tls-cache')
+  }
+
+  get status(): ServerTlsStatus {
+    const { config } = this.options
+    return {
+      sourceUrl: config.sourceUrl,
+      port: config.port,
+      serving: this.server !== null,
+      error: this.lastError,
+      ...(this.installed ? describeCertificate(this.installed.cert) : {})
+    }
   }
 
   /** Never rejects: a certificate problem must not stop the plain listener from serving. */
@@ -105,42 +123,43 @@ export class WsTlsListener {
 
   private async refresh(): Promise<void> {
     try {
-      const pair = await this.loadCertificates()
-      if (pair) {
-        await this.install(pair)
-      }
+      await this.install(await this.loadCertificates())
+      this.lastError = null
     } catch (error) {
-      console.warn('[ws-tls] certificate refresh failed:', String(error))
+      this.lastError = error instanceof Error ? error.message : String(error)
+      console.warn('[ws-tls] certificate refresh failed:', this.lastError)
     }
   }
 
-  private async loadCertificates(): Promise<CertificatePair | null> {
-    const { certFile, keyFile, certUrl, keyUrl, authorization } = this.options.config
-    if (certFile && keyFile) {
-      return readCertificateFiles(certFile, keyFile)
-    }
-    if (!certUrl || !keyUrl) {
-      return null
-    }
+  private async loadCertificates(): Promise<CertificatePair> {
+    const source = this.options.config.sourceUrl.replace(/\/$/, '')
     const cachedCert = join(this.cacheDir, 'cert.pem')
     const cachedKey = join(this.cacheDir, 'key.pem')
     try {
       const pair = {
-        cert: await fetchPem(certUrl, authorization),
-        key: await fetchPem(keyUrl, authorization)
+        cert: await fetchPem(`${source}/fullchain.pem`),
+        key: await fetchPem(`${source}/key.pem`)
       }
       if (!isUsable(pair)) {
-        throw new Error('the fetched certificate and key are not a usable pair')
+        throw new Error('the source returned an unusable certificate and key')
       }
       mkdirSync(this.cacheDir, { recursive: true, mode: 0o700 })
       writeFileSync(cachedCert, pair.cert, { mode: 0o600 })
       writeFileSync(cachedKey, pair.key, { mode: 0o600 })
-      chmodSync(cachedKey, 0o600)
       return pair
     } catch (error) {
-      // Off the certificate source's network: the last good copy stays valid for weeks.
-      console.warn('[ws-tls] using cached certificate:', String(error))
-      return readCertificateFiles(cachedCert, cachedKey)
+      // Away from the source's network, the last good copy stays valid for weeks.
+      if (existsSync(cachedCert) && existsSync(cachedKey)) {
+        const cached = {
+          cert: readFileSync(cachedCert, 'utf8'),
+          key: readFileSync(cachedKey, 'utf8')
+        }
+        if (isUsable(cached)) {
+          this.lastError = error instanceof Error ? error.message : String(error)
+          return cached
+        }
+      }
+      throw error
     }
   }
 
@@ -168,4 +187,20 @@ export class WsTlsListener {
     }
     this.installed = pair
   }
+}
+
+// One running transport serves wss://; settings reach it here without threading it through the runtime.
+let activeTlsControl: { reload: () => Promise<void>; status: () => ServerTlsStatus | null } | null =
+  null
+
+export function setActiveServerTlsControl(control: typeof activeTlsControl): void {
+  activeTlsControl = control
+}
+
+export async function reloadServerTls(): Promise<void> {
+  await activeTlsControl?.reload()
+}
+
+export function readServerTlsStatus(): ServerTlsStatus | null {
+  return activeTlsControl?.status() ?? null
 }
