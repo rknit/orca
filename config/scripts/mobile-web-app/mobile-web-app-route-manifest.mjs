@@ -46,7 +46,11 @@ export async function collectMobileWebAppRoutes(appDir, routeRoot = MOBILE_WEB_A
     throw new Error(`[mobile-web-app] no routes under ${join(appDir, routeRoot)}`)
   }
   const rootLayout = await pageRootLayout(appDir)
-  return (rootLayout ? [...routes, rootLayout] : routes).sort((left, right) =>
+  const withLayout =
+    rootLayout && !routes.some((route) => route.key === rootLayout.key)
+      ? [...routes, rootLayout]
+      : routes
+  return withLayout.sort((left, right) =>
     left.key < right.key ? -1 : 1
   )
 }

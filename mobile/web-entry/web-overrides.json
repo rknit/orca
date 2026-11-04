@@ -208,6 +208,10 @@
     {
       "file": "src/platform/shell-storage.web.ts",
       "reason": "Native settings screens can cover a still-mounted page. Observe same-session storage snapshots so preference readers refresh on return without remounting the terminal."
+    },
+    {
+      "file": "app/troubleshoot.web.tsx",
+      "reason": "The native screen adds rows that inspect the shell bundle cache through expo-file-system, whose web stub throws; the web app has no such cache."
     }
   ]
 }

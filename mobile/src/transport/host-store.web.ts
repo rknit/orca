@@ -41,3 +41,15 @@ export function updateHostDescriptor(
 ): Promise<void> {
   return Promise.resolve()
 }
+
+// The bundle's pairing and settings screens import these; credentials stay with whoever hosts the page.
+export const resolvePairingHostIdentity = (
+  _publicKeyB64: string,
+  newHostId: string
+): Promise<{ id: string; name: string }> => Promise.resolve({ id: newHostId, name: newHostId })
+
+export const retryPendingHostCredentialCleanup = (): Promise<{
+  clearedCount: number
+  remainingIds: string[]
+  storageUnreadable: boolean
+}> => Promise.resolve({ clearedCount: 0, remainingIds: [], storageUnreadable: false })

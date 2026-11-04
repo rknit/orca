@@ -21,10 +21,6 @@ export function adoptPairingFromFragment(): void {
   }
 }
 
-export function forgetPairing(): void {
-  localStorage.removeItem(PAIRING_KEY)
-}
-
 export function showPairingForm(root: HTMLElement, message?: string): void {
   root.innerHTML = ''
   root.style.cssText =
@@ -53,4 +49,23 @@ export function showPairingForm(root: HTMLElement, message?: string): void {
     location.replace('/')
   }
   root.append(title, note, input, button)
+}
+
+/** A page failure says nothing about the pairing, so it must not read as a request to pair again. */
+export function showPageFault(root: HTMLElement, message: string): void {
+  root.innerHTML = ''
+  root.style.cssText =
+    'display:flex;flex-direction:column;gap:12px;padding:calc(env(safe-area-inset-top) + 24px) 20px 20px;font:16px -apple-system,system-ui,sans-serif;color:#eee;width:100%;box-sizing:border-box'
+  const title = document.createElement('h1')
+  title.textContent = 'Something went wrong'
+  title.style.cssText = 'font-size:22px;margin:0'
+  const note = document.createElement('p')
+  note.textContent = message
+  note.style.cssText = 'margin:0;color:#aaa;overflow-wrap:anywhere'
+  const button = document.createElement('button')
+  button.textContent = 'Back to Home'
+  button.style.cssText =
+    'font:600 16px -apple-system,system-ui,sans-serif;padding:12px;border-radius:8px;border:0;background:#eee;color:#111'
+  button.onclick = () => location.replace('/')
+  root.append(title, note, button)
 }

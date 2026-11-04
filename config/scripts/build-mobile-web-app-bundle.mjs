@@ -20,6 +20,7 @@ import {
   ROUTE_SOURCE_LOADERS,
   assertRoutesCarryNoSynchronousExports,
   collectMobileWebAppRoutes,
+  MOBILE_WEB_APP_ROUTE_ROOT,
   renderMobileWebAppRouteManifest,
   routePathnameFromKey
 } from './mobile-web-app/mobile-web-app-route-manifest.mjs'
@@ -400,7 +401,10 @@ function localeCatalogOutputs(metafile) {
 }
 
 export async function bundleMobileWebApp({ appDir = defaultAppDir } = {}) {
-  const routes = await collectMobileWebAppRoutes(appDir)
+  const routes = await collectMobileWebAppRoutes(
+    appDir,
+    process.env.ORCA_MOBILE_WEB_ROUTE_ROOT ?? MOBILE_WEB_APP_ROUTE_ROOT
+  )
   await assertRoutesCarryNoSynchronousExports(routes)
   const result = await esbuild.build(mobileWebAppBuildOptions(routes))
   const entryOutputPath = Object.keys(result.metafile.outputs).find(

@@ -1,5 +1,5 @@
 // Stands in for the native shell: the same bridge host, served from this document instead of a WebView's parent.
-import { MOBILE_WEB_PAGE_ROUTES } from '../../../config/scripts/mobile-web-page-routes.mjs'
+import { MOBILE_PWA_PAGE_ROUTES } from '../../../config/scripts/mobile-pwa-page-routes.mjs'
 import { createBridgeHost } from '../mobile-web-shell/bridge-host'
 import {
   clipboardWriteParamsSchema as CLIPBOARD_WRITE,
@@ -12,7 +12,7 @@ import type { PairingOffer } from '../../../src/shared/remote-runtime/pairing/mo
 import { connect } from '../transport/rpc-client'
 import { createStableLogicalRpcClient } from '../transport/stable-logical-rpc-client'
 import { nameMedia, pickMedia, readMedia, releaseMedia } from './pwa-media'
-import { forgetPairing, showPairingForm } from './pwa-pairing'
+import { showPageFault, showPairingForm } from './pwa-pairing'
 import { readColorScheme, readInitialViewport, trackViewport } from './pwa-viewport'
 
 const HOST_ID = 'box'
@@ -73,14 +73,13 @@ export function startPwaHost(root: HTMLElement, offer: PairingOffer): void {
     connect(offer.endpoint, offer.deviceToken, offer.publicKeyB64),
     'lan'
   )
-  const pathname = location.pathname.startsWith(HOST_ROOT) ? location.pathname : HOST_ROOT
-  history.replaceState(null, '', pathname)
-  const view = routeViewOf(MOBILE_WEB_PAGE_ROUTES, pathname, innerWidth >= 768)
+  const pathname = location.pathname
+  const view = routeViewOf(MOBILE_PWA_PAGE_ROUTES, pathname, innerWidth >= 768)
   const supported = (grants: readonly string[]) => grants.filter((g) => !UNSUPPORTED_GRANTS.has(g))
 
   const fail = (message: string) => {
     console.error('[pwa]', message)
-    showPairingForm(root, message)
+    showPageFault(root, message)
   }
 
   const host = createBridgeHost({
@@ -114,9 +113,9 @@ export function startPwaHost(root: HTMLElement, offer: PairingOffer): void {
     },
     serveNativeVerb,
     onNavigate: (href, replace) => {
+      // Keep the current pairing until a new link replaces it: this may just be a stray tap.
       if (href.startsWith('/pair')) {
-        forgetPairing()
-        location.replace('/')
+        showPairingForm(root)
       } else if (href.startsWith(HOST_ROOT)) {
         location[replace ? 'replace' : 'assign'](href)
       } else {

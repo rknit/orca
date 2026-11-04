@@ -1,4 +1,5 @@
 // The shell owns pairing and transport; carry its existing client through the page bridge.
+import { readPageHostProfile } from '../mobile-web-shell/bridge/page-host-profile'
 import { createContext, useContext, useMemo, useRef, type ReactNode } from 'react'
 import type { BridgeRpcClient } from '../mobile-web-shell/bridge/bridge-rpc-client'
 import { BRIDGE_PAGE_CLIENT_ID } from '../mobile-web-shell/bridge/bridge-page-client-identity'
@@ -10,6 +11,11 @@ const Ctx = createContext<RpcClientContextValue | null>(null)
 const PageClientCtx = createContext<BridgeRpcClient | null>(null)
 
 // Inject the entry’s initialized client; building another would compete for the channel’s one onmessage slot.
+function hostIdsFromProfile(): string[] {
+  const host = readPageHostProfile()
+  return host === null ? [] : [host.id]
+}
+
 export function RpcClientProvider({
   client,
   children
@@ -17,7 +23,8 @@ export function RpcClientProvider({
   client: BridgeRpcClient
   children: ReactNode
 }) {
-  const acquiredRef = useRef<Set<string>>(new Set())
+  // Home lists every host's connection before anything acquires it, and this document has just the one.
+  const acquiredRef = useRef(new Set(hostIdsFromProfile()))
 
   const value = useMemo<RpcClientContextValue>(() => {
     // Like native host state, path changes re-notify with the current state so labels re-read.

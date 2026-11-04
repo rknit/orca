@@ -5,11 +5,13 @@ import { join, resolve } from 'node:path'
 
 process.env.ORCA_MOBILE_WEB_ENTRY = 'pwa-entry.ts'
 process.env.ORCA_MOBILE_WEB_ASYNC_STORAGE = 'src/pwa/pwa-async-storage.ts'
+process.env.ORCA_MOBILE_WEB_ROUTE_ROOT = '.'
+const { MOBILE_PWA_PAGE_ROUTES } = await import('./mobile-pwa-page-routes.mjs')
 const { buildMobileWebAppBundle } = await import('./build-mobile-web-app-bundle.mjs')
 
 const root = resolve(import.meta.dirname, '../..')
 const outDir = join(root, 'out', 'mobile-pwa')
-await buildMobileWebAppBundle({ outDir })
+await buildMobileWebAppBundle({ outDir, pageRoutes: MOBILE_PWA_PAGE_ROUTES })
 
 const indexPath = join(outDir, 'index.html')
 const html = readFileSync(indexPath, 'utf8')
