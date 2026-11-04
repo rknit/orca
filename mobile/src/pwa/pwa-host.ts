@@ -65,6 +65,16 @@ async function serveNativeVerb(verb: BridgeNativeVerb, params: unknown): Promise
   }
 }
 
+// Safari autocompletes the host page into the typed address, but the app's landing page is Home.
+// This app has one host, so an edited or stale host segment still means that host.
+function landingPath(pathname: string): string {
+  const [, rest] = pathname.match(/^\/h\/[^/]+(\/.*)?$/) ?? []
+  if (!pathname.startsWith('/h/')) {
+    return pathname
+  }
+  return rest && rest !== '/' ? HOST_ROOT + rest : '/'
+}
+
 export function startPwaHost(root: HTMLElement, offer: PairingOffer): void {
   const channel: OrcaBridgePageChannel = {
     postMessage: (json) => queueMicrotask(() => host.receive(json)),
@@ -77,10 +87,7 @@ export function startPwaHost(root: HTMLElement, offer: PairingOffer): void {
     connect(offer.endpoint, offer.deviceToken, offer.publicKeyB64),
     'lan'
   )
-  // iOS reopens a Home Screen app at its last URL, but the app's landing page is Home, as in native.
-  if (location.pathname === HOST_ROOT) {
-    history.replaceState(null, '', '/')
-  }
+  history.replaceState(null, '', landingPath(location.pathname) + location.search)
   const pathname = location.pathname
   const view = routeViewOf(MOBILE_PWA_PAGE_ROUTES, pathname, innerWidth >= 768)
   const supported = (grants: readonly string[]) => grants.filter((g) => !UNSUPPORTED_GRANTS.has(g))
