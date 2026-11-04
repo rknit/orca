@@ -7,7 +7,8 @@ export async function startQrScan(
   // Loaded on demand so a page that never scans doesn't pay for the decoder.
   const { default: decodeQr } = await import('jsqr')
   const stream = await navigator.mediaDevices.getUserMedia({
-    video: { facingMode: 'environment' },
+    // Pairing codes are dense and the default 640x480 can't resolve one shown small on a screen.
+    video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
     audio: false
   })
   const video = document.createElement('video')
@@ -28,13 +29,23 @@ export async function startQrScan(
     }
     video.remove()
   }
+  let frameCount = 0
+  const decodeRegion = (scale: number): string | undefined => {
+    if (!context) {
+      return undefined
+    }
+    const { videoWidth: width, videoHeight: height } = video
+    const size = Math.min(width, height) * scale
+    canvas.width = size
+    canvas.height = size
+    context.drawImage(video, (width - size) / 2, (height - size) / 2, size, size, 0, 0, size, size)
+    return decodeQr(context.getImageData(0, 0, size, size).data, size, size)?.data
+  }
   const scan = () => {
-    if (context && video.videoWidth > 0) {
-      canvas.width = video.videoWidth
-      canvas.height = video.videoHeight
-      context.drawImage(video, 0, 0)
-      const image = context.getImageData(0, 0, canvas.width, canvas.height)
-      const text = decodeQr(image.data, image.width, image.height)?.data
+    // Decoding a full frame is slow on a phone; alternate with the center, where people aim.
+    frameCount += 1
+    if (video.videoWidth > 0 && frameCount % 6 === 0) {
+      const text = decodeRegion(frameCount % 12 === 0 ? 1 : 0.5)
       if (text && accept(text)) {
         stop()
         onFound(text)
