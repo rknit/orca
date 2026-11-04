@@ -1,10 +1,10 @@
 // Home Screen entry: installs a browser host for the phone's page bundle, which then boots unchanged.
+import { startPwaHost } from '../src/pwa/pwa-host'
 import {
   adoptPairingFromFragment,
-  readStoredPairing,
+  readActivePairing,
   showPairingForm
 } from '../src/pwa/pwa-pairing'
-import { startPwaHost } from '../src/pwa/pwa-host'
 
 const root = document.getElementById('root') ?? document.body
 adoptPairingFromFragment()
@@ -14,10 +14,9 @@ window.addEventListener('hashchange', () => {
     location.replace('/')
   }
 })
-const offer = readStoredPairing()
-if (offer === null) {
+if (readActivePairing() === null) {
   showPairingForm(root)
 } else {
-  startPwaHost(root, offer)
+  startPwaHost(root)
   void import('./index')
 }

@@ -8,21 +8,32 @@ import {
 } from '../mobile-web-shell/bridge/bridge-native-verbs'
 import type { OrcaBridgePageChannel } from '../mobile-web-shell/bridge/orca-bridge-page-channel'
 import { routeViewOf } from '../mobile-web-shell/page-route-policy'
-import type { PairingOffer } from '../../../src/shared/remote-runtime/pairing/mobile-relay-pairing-offer'
+import { publishPageHostPeers } from '../mobile-web-shell/bridge/page-host-profile'
+import { parsePairingCode } from '../transport/pairing'
 import { recordHostDescriptorFromStatus } from '../transport/host-descriptor-recorder'
 import { readProbedHostStatus } from '../transport/host-status-probe-operations'
 import { connect } from '../transport/rpc-client'
 import { createStableLogicalRpcClient } from '../transport/stable-logical-rpc-client'
 import { readAudio, startAudio, stopAudio } from './pwa-audio'
-import { readPersonalHostName } from './pwa-host-name'
+import {
+  readMachineName,
+  readPersonalHostName,
+  saveMachineName,
+  setActiveHostForNames
+} from './pwa-host-name'
 import { nameMedia, pickMedia, readMedia, releaseMedia } from './pwa-media'
-import { showPageFault, showPairingForm } from './pwa-pairing'
+import {
+  readActivePairing,
+  readPairings,
+  setActivePairing,
+  showPageFault,
+  showPairingForm,
+  type StoredPairing
+} from './pwa-pairing'
 import { readColorScheme, readInitialViewport, trackViewport } from './pwa-viewport'
 
-const HOST_ID = 'server'
-const HOST_ROOT = `/h/${HOST_ID}`
 const STORAGE_PREFIX = 'orca-pwa:page:'
-const MACHINE_NAME_KEY = 'orca-pwa:machine-name'
+const SWITCHED_KEY = 'orca-pwa:switched-server'
 // The rail needs a side inset only native can draw; without external navigation, sealed previews render links as text.
 const UNSUPPORTED_GRANTS = new Set(['terminalKeyRail', 'externalNavigation'])
 
@@ -67,17 +78,88 @@ async function serveNativeVerb(verb: BridgeNativeVerb, params: unknown): Promise
   }
 }
 
-// Safari autocompletes the host page into the typed address, but the app's landing page is Home.
-// This app has one host, so an edited or stale host segment still means that host.
-function landingPath(pathname: string): string {
-  const [, rest] = pathname.match(/^\/h\/[^/]+(\/.*)?$/) ?? []
-  if (!pathname.startsWith('/h/')) {
-    return pathname
-  }
-  return rest && rest !== '/' ? HOST_ROOT + rest : '/'
+function hostSegment(pathname: string): { hostId: string; rest: string } | null {
+  const match = pathname.match(/^\/h\/([^/]+)(\/.*)?$/)
+  return match ? { hostId: decodeURIComponent(match[1]!), rest: match[2] ?? '' } : null
 }
 
-export function startPwaHost(root: HTMLElement, offer: PairingOffer): void {
+// A document holds one connection, so opening another server means loading it fresh.
+function pickServerFromUrl(pairings: readonly StoredPairing[]): void {
+  const segment = hostSegment(location.pathname)
+  if (segment && pairings.some((pairing) => pairing.id === segment.hostId)) {
+    if (segment.hostId !== readActivePairing()?.id) {
+      setActivePairing(segment.hostId)
+      sessionStorage.setItem(SWITCHED_KEY, '1')
+    }
+  }
+}
+
+// Safari reopens the last address, but the app's landing page is Home; an edited or stale host
+// segment still means the server this document is connected to.
+function landingPath(pathname: string, hostRoot: string): string {
+  const segment = hostSegment(pathname)
+  if (!segment) {
+    return pathname
+  }
+  if (sessionStorage.getItem(SWITCHED_KEY) !== null) {
+    sessionStorage.removeItem(SWITCHED_KEY)
+    return hostRoot + segment.rest
+  }
+  return segment.rest && segment.rest !== '/' ? hostRoot + segment.rest : '/'
+}
+
+// Home links to any listed server; the router would otherwise stay in this document's connection.
+function reloadWhenLeavingServer(hostId: string, pairings: readonly StoredPairing[]): void {
+  const pushState = history.pushState.bind(history)
+  history.pushState = (state, title, url) => {
+    const segment = url ? hostSegment(new URL(url, location.href).pathname) : null
+    if (
+      segment &&
+      segment.hostId !== hostId &&
+      pairings.some((pairing) => pairing.id === segment.hostId)
+    ) {
+      location.assign(String(url))
+      return
+    }
+    pushState(state, title, url)
+  }
+}
+
+function otherServers(activeId: string, pairings: readonly StoredPairing[]) {
+  return pairings
+    .filter((pairing) => pairing.id !== activeId)
+    .flatMap((pairing) => {
+      const offer = parsePairingCode(pairing.code)
+      const machineName = readMachineName(pairing.id)
+      const personalName = readPersonalHostName(pairing.id)
+      return offer
+        ? [
+            {
+              id: pairing.id,
+              name: personalName ?? machineName ?? pairing.id,
+              ...(personalName ? { personalName } : {}),
+              ...(machineName ? { lastKnownMachineName: machineName } : {}),
+              endpoint: offer.endpoint,
+              lastConnected: 0
+            }
+          ]
+        : []
+    })
+}
+
+export function startPwaHost(root: HTMLElement): void {
+  const pairings = readPairings()
+  pickServerFromUrl(pairings)
+  const active = readActivePairing()
+  if (!active) {
+    showPairingForm(root)
+    return
+  }
+  const { id: HOST_ID, offer } = active
+  const HOST_ROOT = `/h/${HOST_ID}`
+  setActiveHostForNames(HOST_ID)
+  publishPageHostPeers(otherServers(HOST_ID, pairings))
+  reloadWhenLeavingServer(HOST_ID, pairings)
   const channel: OrcaBridgePageChannel = {
     postMessage: (json) => queueMicrotask(() => host.receive(json)),
     onmessage: null
@@ -89,12 +171,12 @@ export function startPwaHost(root: HTMLElement, offer: PairingOffer): void {
     connect(offer.endpoint, offer.deviceToken, offer.publicKeyB64),
     'lan'
   )
-  history.replaceState(null, '', landingPath(location.pathname) + location.search)
+  history.replaceState(null, '', landingPath(location.pathname, HOST_ROOT) + location.search)
   const pathname = location.pathname
   const view = routeViewOf(MOBILE_PWA_PAGE_ROUTES, pathname, innerWidth >= 768)
   const supported = (grants: readonly string[]) => grants.filter((g) => !UNSUPPORTED_GRANTS.has(g))
 
-  const machineName = localStorage.getItem(MACHINE_NAME_KEY)
+  const machineName = readMachineName()
   const personalName = readPersonalHostName()
   const fail = (message: string) => {
     console.error('[pwa]', message)
@@ -175,7 +257,7 @@ export function startPwaHost(root: HTMLElement, offer: PairingOffer): void {
       recordHostDescriptorFromStatus(HOST_ID, status)
       const name = status.machineName?.trim()
       if (name) {
-        localStorage.setItem(MACHINE_NAME_KEY, name)
+        saveMachineName(name)
       }
     }
   }

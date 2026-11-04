@@ -1,6 +1,7 @@
 // Read the shell’s init.host instead of an absent web keychain; otherwise routes would show Host not found.
 import {
   publishPageHostProfile,
+  readPageHostPeers,
   readPageHostProfile
 } from '../mobile-web-shell/bridge/page-host-profile'
 import { savePersonalHostName } from '../pwa/pwa-host-name'
@@ -10,7 +11,11 @@ import type { HostCatalogEntry, HostProfile } from './types'
 // The page gets no device credential or public key; RPC uses the shell’s paired client.
 function pageHosts(): HostProfile[] {
   const host = readPageHostProfile()
-  return host === null ? [] : [{ ...host, deviceToken: '', publicKeyB64: '' }]
+  return (host === null ? [] : [host, ...readPageHostPeers()]).map((listed) => ({
+    ...listed,
+    deviceToken: '',
+    publicKeyB64: ''
+  }))
 }
 
 export const loadHosts = (): Promise<HostProfile[]> => Promise.resolve(pageHosts())
