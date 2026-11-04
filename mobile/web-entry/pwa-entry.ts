@@ -2,6 +2,7 @@
 import { startPwaHost } from '../src/pwa/pwa-host'
 import {
   adoptPairingFromFragment,
+  PAIRING_PATH,
   readActivePairing,
   showPairingForm
 } from '../src/pwa/pwa-pairing'
@@ -14,7 +15,7 @@ window.addEventListener('hashchange', () => {
     location.replace('/')
   }
 })
-if (readActivePairing() === null) {
+if (readActivePairing() === null || location.pathname.startsWith(PAIRING_PATH)) {
   showPairingForm(root)
 } else {
   startPwaHost(root)

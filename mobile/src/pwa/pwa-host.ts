@@ -23,6 +23,7 @@ import {
 } from './pwa-host-name'
 import { nameMedia, pickMedia, readMedia, releaseMedia } from './pwa-media'
 import {
+  PAIRING_PATH,
   readActivePairing,
   readPairings,
   setActivePairing,
@@ -112,7 +113,13 @@ function landingPath(pathname: string, hostRoot: string): string {
 function reloadWhenLeavingServer(hostId: string, pairings: readonly StoredPairing[]): void {
   const pushState = history.pushState.bind(history)
   history.pushState = (state, title, url) => {
-    const segment = url ? hostSegment(new URL(url, location.href).pathname) : null
+    const pathname = url ? new URL(url, location.href).pathname : ''
+    // The native pairing screens are bundled but can't save a server here; the web form can.
+    if (pathname.startsWith('/pair')) {
+      location.assign(PAIRING_PATH)
+      return
+    }
+    const segment = hostSegment(pathname)
     if (
       segment &&
       segment.hostId !== hostId &&
@@ -224,7 +231,7 @@ export function startPwaHost(root: HTMLElement): void {
     onNavigate: (href, replace) => {
       // Keep the current pairing until a new link replaces it: this may just be a stray tap.
       if (href.startsWith('/pair')) {
-        showPairingForm(root)
+        location.assign(PAIRING_PATH)
       } else if (href.startsWith(HOST_ROOT)) {
         location[replace ? 'replace' : 'assign'](href)
       } else {

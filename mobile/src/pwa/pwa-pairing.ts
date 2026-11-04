@@ -8,6 +8,8 @@ const PAIRINGS_KEY = 'orca-pwa:pairings'
 const ACTIVE_KEY = 'orca-pwa:active-server'
 const FIRST_SERVER_ID = 'server'
 
+export const PAIRING_PATH = '/pair'
+
 export type StoredPairing = { id: string; code: string }
 
 function writePairings(pairings: readonly StoredPairing[]): void {
