@@ -1,6 +1,6 @@
 import { parsePairingCode } from '../transport/pairing'
 import { migrateLegacyHostNames } from './pwa-host-name'
-import { startQrScan } from './pwa-qr-scan'
+import { readQrFromPhoto, startQrScan } from './pwa-qr-scan'
 import type { PairingOffer } from '../../../src/shared/remote-runtime/pairing/mobile-relay-pairing-offer'
 
 const LEGACY_PAIRING_KEY = 'orca-pwa:pairing'
@@ -129,7 +129,10 @@ export function showPairingForm(root: HTMLElement, message?: string): void {
         }
         return problem === null
       },
-      pair
+      pair,
+      (status) => {
+        note.textContent = status
+      }
     )
       .then((stop) => {
         stopScan = stop
@@ -139,6 +142,33 @@ export function showPairingForm(root: HTMLElement, message?: string): void {
         note.textContent = 'The camera is unavailable. Allow it for this site, or paste the link.'
       })
   }
+  const photoInput = document.createElement('input')
+  photoInput.type = 'file'
+  photoInput.accept = 'image/*'
+  photoInput.setAttribute('capture', 'environment')
+  photoInput.style.display = 'none'
+  photoInput.onchange = () => {
+    const file = photoInput.files?.[0]
+    if (!file) {
+      return
+    }
+    note.textContent = 'Reading the photo…'
+    void readQrFromPhoto(file)
+      .then((text) => {
+        if (text === null) {
+          note.textContent = 'No QR code found in that photo. Fill more of the frame and try again.'
+        } else {
+          pair(text)
+        }
+      })
+      .catch(() => {
+        note.textContent = 'That photo could not be read.'
+      })
+  }
+  const photo = document.createElement('button')
+  photo.textContent = 'Take a photo of the code'
+  photo.style.cssText = secondaryStyle
+  photo.onclick = () => photoInput.click()
   const button = document.createElement('button')
   button.textContent = 'Pair'
   button.style.cssText =
@@ -146,7 +176,7 @@ export function showPairingForm(root: HTMLElement, message?: string): void {
   button.onclick = () => {
     pair(input.value)
   }
-  root.append(title, note, scanner, scan, input, button)
+  root.append(title, note, scanner, scan, photo, photoInput, input, button)
   if (readPairings().length > 0) {
     const cancel = document.createElement('button')
     cancel.textContent = 'Cancel'

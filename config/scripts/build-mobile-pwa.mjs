@@ -28,6 +28,10 @@ const html = readFileSync(indexPath, 'utf8')
   )
 writeFileSync(indexPath, html)
 copyFileSync(join(root, 'mobile/assets/icon.png'), join(outDir, 'apple-touch-icon.png'))
+copyFileSync(
+  join(root, 'mobile/node_modules/zxing-wasm/dist/reader/zxing_reader.wasm'),
+  join(outDir, 'zxing_reader.wasm')
+)
 writeFileSync(
   join(outDir, 'app.webmanifest'),
   JSON.stringify({
