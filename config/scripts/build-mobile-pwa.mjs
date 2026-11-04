@@ -13,7 +13,7 @@ await buildMobileWebAppBundle({ outDir })
 
 const indexPath = join(outDir, 'index.html')
 const html = readFileSync(indexPath, 'utf8')
-  .replace('initial-scale=1"', 'initial-scale=1, viewport-fit=cover"')
+  .replace('initial-scale=1"', 'initial-scale=1, maximum-scale=1, viewport-fit=cover"')
   .replace(
     '<title>',
     '<meta name="mobile-web-app-capable" content="yes" />\n' +
@@ -22,7 +22,7 @@ const html = readFileSync(indexPath, 'utf8')
       '<meta name="apple-mobile-web-app-title" content="Orca" />\n' +
       '<link rel="apple-touch-icon" href="/apple-touch-icon.png" />\n' +
       '<link rel="manifest" href="/app.webmanifest" />\n' +
-      '<style>html{background:#111}</style>\n<title>'
+      '<style>html{background:#111}html,body{position:fixed;inset:0;overflow:hidden}</style>\n<title>'
   )
 writeFileSync(indexPath, html)
 copyFileSync(join(root, 'mobile/assets/icon.png'), join(outDir, 'apple-touch-icon.png'))

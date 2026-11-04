@@ -11,6 +11,7 @@ import { routeViewOf } from '../mobile-web-shell/page-route-policy'
 import type { PairingOffer } from '../../../src/shared/remote-runtime/pairing/mobile-relay-pairing-offer'
 import { connect } from '../transport/rpc-client'
 import { createStableLogicalRpcClient } from '../transport/stable-logical-rpc-client'
+import { nameMedia, pickMedia, readMedia, releaseMedia } from './pwa-media'
 import { forgetPairing, showPairingForm } from './pwa-pairing'
 import { readColorScheme, readInitialViewport, trackViewport } from './pwa-viewport'
 
@@ -43,13 +44,16 @@ async function serveNativeVerb(verb: BridgeNativeVerb, params: unknown): Promise
     case 'native.clipboard.read':
       return { value: await navigator.clipboard.readText() }
     case 'native.media.pick':
-      return { items: [] }
+      return await pickMedia(params)
+    case 'native.media.read':
+      return await readMedia(params)
+    case 'native.media.release':
+      return releaseMedia(params)
+    case 'native.media.name':
+      return nameMedia(params)
     // Dictation teardown runs even when it never started.
     case 'native.audio.stop':
       return { stopped: true, base64: '', droppedBytes: 0 }
-    case 'native.media.read':
-    case 'native.media.release':
-    case 'native.media.name':
     case 'native.audio.start':
     case 'native.audio.read':
     case 'native.pdf.view':

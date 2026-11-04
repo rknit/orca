@@ -18,9 +18,16 @@ function createSafeAreaProbe(): HTMLElement {
   return probe
 }
 
+// iOS can shrink innerHeight with the keyboard open, so measure against the tallest it has been.
+let fullHeight = 0
+
 function readKeyboardInset(): number {
   const viewport = window.visualViewport
-  return viewport ? Math.max(0, Math.round(innerHeight - viewport.height - viewport.offsetTop)) : 0
+  if (!viewport) {
+    return 0
+  }
+  fullHeight = Math.max(fullHeight, innerHeight, viewport.height)
+  return Math.max(0, Math.round(fullHeight - viewport.height))
 }
 
 const darkScheme = window.matchMedia('(prefers-color-scheme: dark)')
@@ -39,14 +46,21 @@ export function readInitialViewport() {
 /** The page reads insets only from its shell, and WebKit pans the document under an open keyboard. */
 export function trackViewport(host: BridgeHost): void {
   const probe = createSafeAreaProbe()
+  const root = document.getElementById('root')
   const publish = () => {
-    // Undo WebKit's pan: the keyboard inset already lifts the page.
+    // The inset lifts the page; WebKit may also pan it to reveal the input, so follow that pan.
     window.scrollTo(0, 0)
+    if (root && window.visualViewport) {
+      root.style.transform = `translateY(${window.visualViewport.offsetTop}px)`
+    }
     host.publishSafeAreaInsets(readSafeAreaInsets(probe))
     host.publishKeyboardInset(readKeyboardInset())
   }
   window.visualViewport?.addEventListener('resize', publish)
   window.visualViewport?.addEventListener('scroll', publish)
-  window.addEventListener('orientationchange', publish)
+  window.addEventListener('orientationchange', () => {
+    fullHeight = 0
+    publish()
+  })
   darkScheme.addEventListener('change', () => host.publishColorScheme(readColorScheme()))
 }
