@@ -9,6 +9,8 @@ import {
 import type { OrcaBridgePageChannel } from '../mobile-web-shell/bridge/orca-bridge-page-channel'
 import { routeViewOf } from '../mobile-web-shell/page-route-policy'
 import type { PairingOffer } from '../../../src/shared/remote-runtime/pairing/mobile-relay-pairing-offer'
+import { recordHostDescriptorFromStatus } from '../transport/host-descriptor-recorder'
+import { readProbedHostStatus } from '../transport/host-status-probe-operations'
 import { connect } from '../transport/rpc-client'
 import { createStableLogicalRpcClient } from '../transport/stable-logical-rpc-client'
 import { nameMedia, pickMedia, readMedia, releaseMedia } from './pwa-media'
@@ -18,6 +20,7 @@ import { readColorScheme, readInitialViewport, trackViewport } from './pwa-viewp
 const HOST_ID = 'box'
 const HOST_ROOT = `/h/${HOST_ID}`
 const STORAGE_PREFIX = 'orca-pwa:page:'
+const MACHINE_NAME_KEY = 'orca-pwa:machine-name'
 // The rail needs a side inset only native can draw; without external navigation, sealed previews render links as text.
 const UNSUPPORTED_GRANTS = new Set(['terminalKeyRail', 'externalNavigation'])
 
@@ -77,6 +80,7 @@ export function startPwaHost(root: HTMLElement, offer: PairingOffer): void {
   const view = routeViewOf(MOBILE_PWA_PAGE_ROUTES, pathname, innerWidth >= 768)
   const supported = (grants: readonly string[]) => grants.filter((g) => !UNSUPPORTED_GRANTS.has(g))
 
+  const machineName = localStorage.getItem(MACHINE_NAME_KEY)
   const fail = (message: string) => {
     console.error('[pwa]', message)
     showPageFault(root, message)
@@ -97,7 +101,14 @@ export function startPwaHost(root: HTMLElement, offer: PairingOffer): void {
     sessionEstablished: false,
     ...readInitialViewport(),
     colorScheme: readColorScheme(),
-    host: { id: HOST_ID, name: HOST_ID, endpoint: offer.endpoint, lastConnected: Date.now() },
+    host: {
+      id: HOST_ID,
+      // A generated-style name, so the machine name the server reports takes over as in the native app.
+      name: machineName ?? 'Host 1',
+      ...(machineName ? { lastKnownMachineName: machineName } : {}),
+      endpoint: offer.endpoint,
+      lastConnected: Date.now()
+    },
     readClientIdentity: () => offer.deviceToken,
     post: (json) => {
       queueMicrotask(() => channel.onmessage?.({ data: json }))
@@ -141,6 +152,23 @@ export function startPwaHost(root: HTMLElement, offer: PairingOffer): void {
   })
 
   trackViewport(host)
+  // Native records this while pairing; here it arrives once connected, so keep it for the next launch.
+  const recordMachineName = async () => {
+    const status = readProbedHostStatus(await client.sendRequest('status.get'))?.status
+    if (status) {
+      recordHostDescriptorFromStatus(HOST_ID, status)
+      const name = status.machineName?.trim()
+      if (name) {
+        localStorage.setItem(MACHINE_NAME_KEY, name)
+      }
+    }
+  }
+  const unsubscribeState = client.onStateChange((state) => {
+    if (state === 'connected') {
+      unsubscribeState()
+      void recordMachineName().catch(() => {})
+    }
+  })
   const revive = () => {
     if (document.visibilityState === 'visible') {
       client.notifyForeground('app-resume')
