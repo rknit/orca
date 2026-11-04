@@ -50,9 +50,7 @@ export async function collectMobileWebAppRoutes(appDir, routeRoot = MOBILE_WEB_A
     rootLayout && !routes.some((route) => route.key === rootLayout.key)
       ? [...routes, rootLayout]
       : routes
-  return withLayout.sort((left, right) =>
-    left.key < right.key ? -1 : 1
-  )
+  return withLayout.sort((left, right) => (left.key < right.key ? -1 : 1))
 }
 
 // Require web root layout: native owns pairing/push; absent override mounts DefaultNavigator’s all-edge SafeAreaView.
