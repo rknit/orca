@@ -1,10 +1,14 @@
 // Stands in for the native shell: the same bridge host, served from this document instead of a WebView's parent.
 import { MOBILE_WEB_PAGE_ROUTES } from '../../../config/scripts/mobile-web-page-routes.mjs'
 import { createBridgeHost } from '../mobile-web-shell/bridge-host'
-import type { BridgeNativeVerb } from '../mobile-web-shell/bridge/bridge-native-verbs'
+import {
+  clipboardWriteParamsSchema as CLIPBOARD_WRITE,
+  storageReadParamsSchema,
+  type BridgeNativeVerb
+} from '../mobile-web-shell/bridge/bridge-native-verbs'
 import type { OrcaBridgePageChannel } from '../mobile-web-shell/bridge/orca-bridge-page-channel'
 import { routeViewOf } from '../mobile-web-shell/page-route-policy'
-import type { PairingOffer } from '../transport/pairing'
+import type { PairingOffer } from '../../../src/shared/remote-runtime/pairing/mobile-relay-pairing-offer'
 import { connect } from '../transport/rpc-client'
 import { createStableLogicalRpcClient } from '../transport/stable-logical-rpc-client'
 import { forgetPairing, showPairingForm } from './pwa-pairing'
@@ -28,12 +32,13 @@ function readPageStorage(): Record<string, string> {
 }
 
 async function serveNativeVerb(verb: BridgeNativeVerb, params: unknown): Promise<unknown> {
-  const fields = (params ?? {}) as { key?: string; value?: string; text?: string }
   switch (verb) {
     case 'native.storage.read':
-      return { value: localStorage.getItem(STORAGE_PREFIX + fields.key) }
+      return {
+        value: localStorage.getItem(STORAGE_PREFIX + storageReadParamsSchema.parse(params).key)
+      }
     case 'native.clipboard.write':
-      await navigator.clipboard.writeText(fields.value ?? fields.text ?? '')
+      await navigator.clipboard.writeText(CLIPBOARD_WRITE.parse(params).value)
       return { written: true }
     case 'native.clipboard.read':
       return { value: await navigator.clipboard.readText() }
@@ -42,7 +47,12 @@ async function serveNativeVerb(verb: BridgeNativeVerb, params: unknown): Promise
     // Dictation teardown runs even when it never started.
     case 'native.audio.stop':
       return { stopped: true, base64: '', droppedBytes: 0 }
-    default:
+    case 'native.media.read':
+    case 'native.media.release':
+    case 'native.media.name':
+    case 'native.audio.start':
+    case 'native.audio.read':
+    case 'native.pdf.view':
       throw new Error(`${verb} is not available in the web app`)
   }
 }

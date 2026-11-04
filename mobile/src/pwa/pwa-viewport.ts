@@ -3,10 +3,10 @@ import type { BridgeHost } from '../mobile-web-shell/bridge-host-contract'
 function readSafeAreaInsets(probe: HTMLElement) {
   const style = getComputedStyle(probe)
   return {
-    top: parseFloat(style.paddingTop) || 0,
-    right: parseFloat(style.paddingRight) || 0,
-    bottom: parseFloat(style.paddingBottom) || 0,
-    left: parseFloat(style.paddingLeft) || 0
+    top: Number.parseFloat(style.paddingTop) || 0,
+    right: Number.parseFloat(style.paddingRight) || 0,
+    bottom: Number.parseFloat(style.paddingBottom) || 0,
+    left: Number.parseFloat(style.paddingLeft) || 0
   }
 }
 

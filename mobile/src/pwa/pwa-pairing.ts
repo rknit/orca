@@ -1,5 +1,5 @@
 import { parsePairingCode } from '../transport/pairing'
-import type { PairingOffer } from '../transport/pairing'
+import type { PairingOffer } from '../../../src/shared/remote-runtime/pairing/mobile-relay-pairing-offer'
 
 const PAIRING_KEY = 'orca-pwa:pairing'
 
