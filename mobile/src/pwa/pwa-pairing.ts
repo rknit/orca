@@ -28,7 +28,7 @@ export function forgetPairing(): void {
 export function showPairingForm(root: HTMLElement, message?: string): void {
   root.innerHTML = ''
   root.style.cssText =
-    'display:flex;flex-direction:column;gap:12px;padding:calc(env(safe-area-inset-top) + 24px) 20px 20px;font:16px -apple-system,system-ui,sans-serif;color:#eee;width:100%'
+    'display:flex;flex-direction:column;gap:12px;padding:calc(env(safe-area-inset-top) + 24px) 20px 20px;font:16px -apple-system,system-ui,sans-serif;color:#eee;width:100%;box-sizing:border-box'
   const title = document.createElement('h1')
   title.textContent = 'Pair with Orca'
   title.style.cssText = 'font-size:22px;margin:0'
