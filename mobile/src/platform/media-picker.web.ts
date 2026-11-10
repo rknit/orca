@@ -18,6 +18,7 @@ import {
   type PickedMobileImage
 } from './media-picker-contract'
 import { isPickedImageMime, mobilePickedFileFallbackName } from './mobile-picked-file-name'
+import { inTapMediaPicker } from './in-tap-media-picker'
 
 // Read staged handles in chunks because images exceed reply caps; release every handle, including unused extras, before the eight-item registry fills.
 // Refusals reject; only user cancellation returns an empty selection.
@@ -65,9 +66,28 @@ async function* readPicked(
   }
 }
 
-async function pickFileItems(verbs: NativeVerbs): Promise<readonly BridgeMediaItem[]> {
+// With an in-tap picker, start the pick when the caller asks, still inside its tap, rather than
+// when it first reads; the shell's own picker needs no activation and keeps the lazy start.
+function startPick(
+  verbs: NativeVerbs,
+  source: MobileImageSource,
+  multiple: boolean
+): () => Promise<readonly BridgeMediaItem[]> {
+  const inTap = verbs.canPickMedia ? inTapMediaPicker() : null
+  if (inTap === null) {
+    return () => verbs.pickMedia(source, multiple)
+  }
+  const items = inTap({ source, multiple }).then((result) => result.items)
+  // A caller that stops before reading still settles this; its failure has no reader to reach.
+  items.catch(() => {})
+  return () => items
+}
+
+async function pickFileItems(
+  pick: () => Promise<readonly BridgeMediaItem[]>
+): Promise<readonly BridgeMediaItem[]> {
   try {
-    return await verbs.pickMedia('files', true)
+    return await pick()
   } catch (error) {
     throw error instanceof NativeVerbError && error.reason === 'native_media_too_large'
       ? new MobileFileTooLargeError(null)
@@ -102,21 +122,27 @@ export function useMediaPicker(): MediaPicker {
   return useMemo<MediaPicker>(
     () => ({
       pickImage: async (source) => {
-        for await (const image of readPicked(verbs, await verbs.pickMedia(source, false), source)) {
+        for await (const image of readPicked(verbs, await startPick(verbs, source, false)(), source)) {
           return image
         }
         return null
       },
-      pickImages: (source) => ({
-        [Symbol.asyncIterator]: async function* () {
-          yield* readPicked(verbs, await verbs.pickMedia(source, true), source)
+      pickImages: (source) => {
+        const items = startPick(verbs, source, true)
+        return {
+          [Symbol.asyncIterator]: async function* () {
+            yield* readPicked(verbs, await items(), source)
+          }
         }
-      }),
-      pickFiles: () => ({
-        [Symbol.asyncIterator]: async function* () {
-          yield* readPickedFiles(verbs, await pickFileItems(verbs))
+      },
+      pickFiles: () => {
+        const items = startPick(verbs, 'files', true)
+        return {
+          [Symbol.asyncIterator]: async function* () {
+            yield* readPickedFiles(verbs, await pickFileItems(items))
+          }
         }
-      })
+      }
     }),
     [verbs]
   )

@@ -21,7 +21,8 @@ import {
   saveMachineName,
   setActiveHostForNames
 } from './pwa-host-name'
-import { nameMedia, pickMedia, readMedia, releaseMedia } from './pwa-media'
+import { nameMedia, pickMedia, pickMediaInTap, readMedia, releaseMedia } from './pwa-media'
+import { registerInTapMediaPicker } from '../platform/in-tap-media-picker'
 import {
   PAIRING_PATH,
   readActivePairing,
@@ -82,6 +83,12 @@ async function serveNativeVerb(verb: BridgeNativeVerb, params: unknown): Promise
 function hostSegment(pathname: string): { hostId: string; rest: string } | null {
   const match = pathname.match(/^\/h\/([^/]+)(\/.*)?$/)
   return match ? { hostId: decodeURIComponent(match[1]!), rest: match[2] ?? '' } : null
+}
+
+// Handed-off targets reload under their own grants, on whichever listed server they name.
+function isPairedHostPath(pathname: string, pairings: readonly StoredPairing[]): boolean {
+  const segment = hostSegment(pathname)
+  return segment !== null && pairings.some((pairing) => pairing.id === segment.hostId)
 }
 
 // A document holds one connection, so opening another server means loading it fresh.
@@ -173,6 +180,7 @@ export function startPwaHost(root: HTMLElement): void {
   }
   const scope: typeof globalThis & { orcaBridge?: OrcaBridgePageChannel } = globalThis
   scope.orcaBridge = channel
+  registerInTapMediaPicker(pickMediaInTap)
 
   const client = createStableLogicalRpcClient(
     connect(offer.endpoint, offer.deviceToken, offer.publicKeyB64),
@@ -232,7 +240,7 @@ export function startPwaHost(root: HTMLElement): void {
       // Keep the current pairing until a new link replaces it: this may just be a stray tap.
       if (href.startsWith('/pair')) {
         location.assign(PAIRING_PATH)
-      } else if (href.startsWith(HOST_ROOT)) {
+      } else if (isPairedHostPath(new URL(href, location.href).pathname, pairings)) {
         location[replace ? 'replace' : 'assign'](href)
       } else {
         console.warn('[pwa] no web screen for', href)

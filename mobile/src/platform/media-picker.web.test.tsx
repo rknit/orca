@@ -1,7 +1,7 @@
 // Drive the real port pair to verify shell-only pick/read/release and byte reconstruction.
 import type { ReactElement } from 'react'
 import { act, create } from 'react-test-renderer'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Stub re-exported screen hooks to keep Expo out of this test runtime.
 vi.mock('../transport/host-client-hooks', () => ({
@@ -27,6 +27,7 @@ import {
 } from './media-picker-test-shell'
 
 import { useMediaPicker } from './media-picker.web'
+import { registerInTapMediaPicker, type InTapMediaPicker } from './in-tap-media-picker'
 import type { MediaPicker, PickedMobileImage } from './media-picker-contract'
 
 const held: { picker: MediaPicker | null } = { picker: null }
@@ -116,5 +117,25 @@ describe('picking media from inside the shell', () => {
       'read media-1 20:5',
       'release media-1'
     ])
+  })
+})
+
+describe('picking media where the host shares the page document', () => {
+  afterEach(() => {
+    registerInTapMediaPicker(null)
+  })
+
+  it('starts the pick when asked, still inside the tap, instead of through the bridge', async () => {
+    const shell = createMediaTestShell({ staged: { library: [] } })
+    const pair = pairFor(shell)
+    const picker = await mount(pair)
+    const inTap = vi.fn<InTapMediaPicker>(() => Promise.resolve({ items: [] }))
+    registerInTapMediaPicker(inTap)
+
+    const images = picker.pickImages('library')
+    expect(inTap).toHaveBeenCalledWith({ source: 'library', multiple: true })
+
+    expect(await collect(pair, images)).toEqual([])
+    expect(shell.calls).toEqual([])
   })
 })

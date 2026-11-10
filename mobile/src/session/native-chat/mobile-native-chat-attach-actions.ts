@@ -1,8 +1,11 @@
+import { Platform } from 'react-native'
 import { AtSign, Image, Package, Paperclip, Terminal } from 'lucide-react-native'
 import type { ActionSheetAction } from '../../components/ActionSheetModal'
 import { translate } from '../../i18n/mobile-i18n'
 
-// Dismiss the sheet before opening pickers because iOS cannot present them over its Modal.
+// Dismiss the sheet before opening pickers because iOS cannot present them over its Modal. A page's
+// sheet is no Modal, and Safari opens a file picker only inside the tap, so the web picks at once.
+const PICKER_CLOSES_SHEET_FIRST = Platform.OS !== 'web'
 export function mobileNativeChatAttachActions(args: {
   onPhotos: (() => void) | undefined
   onFiles: (() => void) | undefined
@@ -17,7 +20,7 @@ export function mobileNativeChatAttachActions(args: {
       id: 'photos',
       label: translate('session.nativeChatAttachActions.photos', 'Photos'),
       icon: Image,
-      closeBeforePress: true,
+      closeBeforePress: PICKER_CLOSES_SHEET_FIRST,
       onPress: args.onPhotos
     })
   }
@@ -27,7 +30,7 @@ export function mobileNativeChatAttachActions(args: {
       label: translate('session.nativeChatAttachActions.files', 'Files'),
       hint: translate('session.nativeChatAttachActions.fileTypes', 'PDF, text, code…'),
       icon: Paperclip,
-      closeBeforePress: true,
+      closeBeforePress: PICKER_CLOSES_SHEET_FIRST,
       onPress: args.onFiles
     })
   }

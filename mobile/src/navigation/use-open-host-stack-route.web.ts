@@ -1,11 +1,13 @@
 import { useCallback } from 'react'
-import { useRouter } from 'expo-router'
 import type { HostStackRouteTarget } from './host-stack-navigation'
+import { useRouteHandoff } from './route-handoff'
 
 // Native rebuilds the root stack with the host beneath the target; the page has no such stack, so
 // that navigation stops on the host screen. Pushing the target keeps browser Back working.
+// The handoff reopens targets needing grants this document lacks (session media and audio) under
+// their own; a raw push would mount them with the opener's grants.
 export function useOpenHostStackRoute(): (hostId: string, target: HostStackRouteTarget) => void {
-  const router = useRouter()
+  const router = useRouteHandoff()
   return useCallback(
     (_hostId, target) => {
       const query = new URLSearchParams()
