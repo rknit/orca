@@ -16,6 +16,7 @@ const {
   macTerminalHostSignIgnore,
   verifyMacTerminalHost
 } = require('./scripts/macos-terminal-host-bundle.cjs')
+const { applyUniqueMacExecutableUuids } = require('./scripts/macos-unique-macho-uuid.cjs')
 const {
   assertPackagedNativeVariantsInstalled,
   assertProcessHostOutputBuilt,
@@ -406,6 +407,11 @@ module.exports = {
       applyMacHelperFolderUsageDescriptions(
         join(context.appOutDir, `${context.packager.appInfo.productFilename}.app`),
         context.packager.appInfo.productFilename
+      )
+      applyUniqueMacExecutableUuids(
+        join(context.appOutDir, `${context.packager.appInfo.productFilename}.app`),
+        context.packager.appInfo.productFilename,
+        appId
       )
       const architecture = macSliceArch(context.arch, 'local-build compatibility')
       const schedulingAddon = buildMacShipItScheduling(resourcesDir, architecture)
