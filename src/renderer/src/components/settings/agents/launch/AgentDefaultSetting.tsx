@@ -42,7 +42,9 @@ export function AgentDefaultSetting({
   catalog,
   description,
   onSetDefault,
-  defaultOpensAsChat = false
+  defaultOpensAsChat = false,
+  autoLabel,
+  clearValue = 'blank'
 }: {
   defaultAgent: TuiAgent | 'blank' | null
   detectedIds: Set<string> | null
@@ -52,6 +54,10 @@ export function AgentDefaultSetting({
   catalog: AgentCatalogEntry[]
   description: string
   onSetDefault: (agent: TuiAgent | 'blank' | null) => void
+  /** Replaces the "Auto" pill label, e.g. when null inherits a broader default. */
+  autoLabel?: string
+  /** Value written when the active pill is clicked again. */
+  clearValue?: TuiAgent | 'blank' | null
 }): React.JSX.Element {
   const storedDefaultAgent =
     defaultAgent !== null && defaultAgent !== 'blank'
@@ -71,10 +77,10 @@ export function AgentDefaultSetting({
       <div className="flex flex-wrap gap-2">
         <DefaultAgentPill
           active={defaultAgent === null}
-          onClick={() => onSetDefault(defaultAgent === null ? 'blank' : null)}
+          onClick={() => onSetDefault(defaultAgent === null ? clearValue : null)}
         >
           {defaultAgent === null && <Check className="size-3.5" />}
-          {translate('auto.components.settings.AgentsPane.92033495ff', 'Auto')}
+          {autoLabel ?? translate('auto.components.settings.AgentsPane.92033495ff', 'Auto')}
         </DefaultAgentPill>
         {defaultAgentPills.map((agent) => {
           const isActive = defaultAgent === agent.id
@@ -84,7 +90,7 @@ export function AgentDefaultSetting({
             <DefaultAgentPill
               key={agent.id}
               active={isActive}
-              onClick={() => onSetDefault(isActive ? 'blank' : agent.id)}
+              onClick={() => onSetDefault(isActive ? clearValue : agent.id)}
               title={
                 isUndetected
                   ? translate(

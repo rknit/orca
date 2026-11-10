@@ -1,4 +1,5 @@
 import type { AppState } from '@/store/types'
+import { findRepoForHost } from '@/store/slices/repo-host-identity'
 import { parseExecutionHostId } from '../../../../shared/execution-host'
 import {
   DASHBOARD_MAX_LAUNCH_WORKTREES,
@@ -138,7 +139,9 @@ export function buildDashboardWorktreeLaunchOptions(
       TUI_AGENT_AUTO_PICK_ORDER.filter((agent) => available.has(agent)),
       state.settings?.disabledTuiAgents
     )
-    const preferred = state.settings?.defaultTuiAgent
+    const preferred =
+      findRepoForHost(state.repos, repoId, { settings: state.settings })?.defaultTuiAgent ??
+      state.settings?.defaultTuiAgent
     result[worktreeId] =
       preferred && preferred !== 'blank' && enabled.includes(preferred)
         ? [preferred, ...enabled.filter((agent) => agent !== preferred)]

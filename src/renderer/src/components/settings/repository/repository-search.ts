@@ -29,6 +29,17 @@ export function getRepositoryPaneSearchEntries(
   return [
     getRepositoryFormatterSearchEntry(),
     {
+      title: translate('components.RepositoryDefaultAgentSection.title', 'Default Agent'),
+      description: translate(
+        'components.RepositoryDefaultAgentSection.description',
+        'Default agent for new agents in this project. Overrides the host default.'
+      ),
+      keywords: [
+        repo.displayName,
+        ...translateSearchKeyword('components.RepositoryDefaultAgentSection.keywordAgent', 'agent')
+      ]
+    },
+    {
       title: translate('components.RepositoryJiraProjectSection.title', 'Default Jira project'),
       description: translate(
         'components.RepositoryJiraProjectSection.description',

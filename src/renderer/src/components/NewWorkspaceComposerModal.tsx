@@ -3,6 +3,7 @@ import {
   type AgentPickerDraft,
   type AgentPickerEntry
 } from '../../../shared/agent-launch/picker/agent-launch-picker'
+import { readWorkspaceDefaultTuiAgent } from '@/runtime/agent-launch-settings/project-default-agent'
 import { DirectWorkItemSetupDialog } from './new-workspace/DirectWorkItemSetupDialog'
 import type { DirectWorkItemSetupRequest } from '@/lib/direct-work-item-setup'
 import { agentChoicePending } from '@/lib/host-chat-program'
@@ -188,8 +189,9 @@ function QuickTabBody({
   const choicePending = (agent: TuiAgent): boolean =>
     agentChoicePending(useAppStore.getState(), agent, launchWorkspace, detected)
   // Pending discovery preserves the existing catalog fallback; current facts settle the default.
+  const defaultAgent = useAppStore((state) => readWorkspaceDefaultTuiAgent(state, launchWorkspace))
   const preferredQuickAgent = pickQuickWorkspaceAgent(
-    settings?.defaultTuiAgent,
+    defaultAgent,
     cardProps.detectedAgentIds,
     settings?.disabledTuiAgents,
     offeredAgentIds,

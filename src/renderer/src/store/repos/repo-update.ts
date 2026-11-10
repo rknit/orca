@@ -5,6 +5,7 @@ import { sanitizeRepoIcon } from '../../../../shared/repo-icon'
 import { normalizeRepoBadgeColor } from '../../../../shared/repo-badge-color'
 import { normalizeGhAccountBinding } from '../../../../shared/github/account-binding'
 import { normalizeJiraProjectReference } from '../../../../shared/jira/jira-project-reference'
+import { normalizeProjectDefaultTuiAgent } from '../../../../shared/agent-launch/catalog/project-default-tui-agent'
 import {
   findRepoForHost,
   getRepoHostIdentityForParts,
@@ -29,6 +30,14 @@ export function sanitizeRepoUpdate(updates: RepoUpdate): RepoUpdate {
       delete sanitized.defaultJiraProject
     } else {
       sanitized.defaultJiraProject = reference
+    }
+  }
+  if ('defaultTuiAgent' in sanitized) {
+    const agent = normalizeProjectDefaultTuiAgent(sanitized.defaultTuiAgent)
+    if (agent === undefined) {
+      delete sanitized.defaultTuiAgent
+    } else {
+      sanitized.defaultTuiAgent = agent
     }
   }
   if ('badgeColor' in sanitized) {
@@ -172,9 +181,16 @@ export function createRepoUpdateActions(
                 ghAccount,
                 externalWorktreeVisibility,
                 agentWorktreeVisibility,
+                defaultTuiAgent,
                 ...updatesWithoutClearSentinels
               } = sanitizedUpdates
               mergedRepo = { ...mergedRepo, ...updatesWithoutClearSentinels }
+              if (defaultTuiAgent === null) {
+                const { defaultTuiAgent: _defaultTuiAgent, ...repoWithoutDefaultAgent } = mergedRepo
+                mergedRepo = repoWithoutDefaultAgent
+              } else if (defaultTuiAgent !== undefined) {
+                mergedRepo = { ...mergedRepo, defaultTuiAgent }
+              }
               if (sourceControlAi === null) {
                 const { sourceControlAi: _sourceControlAi, ...repoWithoutSourceControlAi } =
                   mergedRepo

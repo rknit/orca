@@ -1,3 +1,4 @@
+import { normalizeProjectDefaultTuiAgent } from '../../../shared/agent-launch/catalog/project-default-tui-agent'
 import type { PersistedState } from '../../../shared/persisted-state-types'
 import type { Repo } from '../../../shared/repo-types'
 import type { ExecutionHostId } from '../../../shared/execution-host'
@@ -119,6 +120,7 @@ export class RepoUpdatePersistenceOperations {
       sourceControlAi?: Repo['sourceControlAi'] | null
       externalWorktreeDiscoverySuppressedAt?: Repo['externalWorktreeDiscoverySuppressedAt'] | null
       ghAccount?: GhAccountBinding | null
+      defaultTuiAgent?: Repo['defaultTuiAgent'] | null
     }
   ): Repo | null {
     const repo = findRepoRowForHostScopedWrite(
@@ -186,6 +188,17 @@ export class RepoUpdatePersistenceOperations {
     ) {
       delete repo.issueSourcePreference
       delete sanitizedUpdates.issueSourcePreference
+    }
+    if ('defaultTuiAgent' in sanitizedUpdates) {
+      const agent = normalizeProjectDefaultTuiAgent(sanitizedUpdates.defaultTuiAgent)
+      if (agent === null) {
+        delete repo.defaultTuiAgent
+      }
+      if (agent == null) {
+        delete sanitizedUpdates.defaultTuiAgent
+      } else {
+        sanitizedUpdates.defaultTuiAgent = agent
+      }
     }
     if ('ghAccount' in sanitizedUpdates && sanitizedUpdates.ghAccount == null) {
       delete repo.ghAccount

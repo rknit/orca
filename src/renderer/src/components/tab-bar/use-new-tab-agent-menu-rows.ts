@@ -40,6 +40,7 @@ import { useChatProgramFacts } from '@/lib/host-chat-program-acquisition'
 import { readChatProgram } from '@/lib/host-chat-program'
 import { resolveAgentMenuSelection } from '@/lib/agent-menu-selection'
 import { useHostAgentMenuSettings } from '@/runtime/agent-launch-settings/use-host-agent-launch-preferences'
+import { useProjectAgentMenuSettings } from '@/runtime/agent-launch-settings/project-default-agent'
 import type { TuiAgent } from '../../../../shared/agent-launch/catalog/tui-agent'
 import type { AgentLaunchSurface } from '@/lib/agent-session-launch-plan'
 
@@ -118,11 +119,16 @@ export function useAgentMenuObservation(
   )
   const state = useAppStore.getState()
   const input = buildAgentLaunchRouteInput(state, { agent: 'claude', workspace })
-  const { settings, pending: preferencesPending } = useHostAgentMenuSettings(
+  const { settings: hostSettings, pending: preferencesPending } = useHostAgentMenuSettings(
     unresolvedTarget ? null : facts,
     desktopSettings,
     open || worktreeShown,
     open
+  )
+  const settings = useProjectAgentMenuSettings(
+    hostSettings,
+    unresolvedTarget ? null : workspace,
+    facts.executionHostId
   )
   useAppStore(
     useShallow((state) => [

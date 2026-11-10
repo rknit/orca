@@ -20,6 +20,7 @@ import {
   cachedSnapshot,
   effectiveAgentLaunchPreferences
 } from './host-agent-launch-preferences-resource'
+import { readProjectDefaultTuiAgent, withProjectDefaultTuiAgent } from './project-default-agent'
 
 const cancelled = (): DOMException => new DOMException('Agent preferences cancelled', 'AbortError')
 
@@ -31,9 +32,8 @@ function preferencesForWorkspace(state: AppState, workspace: ProspectiveWorkspac
       ? { agentLaunchChoices: state.settings.agentLaunchChoices }
       : {})
   }
-  const host = parseExecutionHostId(
-    buildAgentLaunchRouteInput(state, { agent: 'claude', workspace }).executionHostId
-  )
+  const { executionHostId } = buildAgentLaunchRouteInput(state, { agent: 'claude', workspace })
+  const host = parseExecutionHostId(executionHostId)
   const owner =
     host?.kind === 'runtime'
       ? {
@@ -44,7 +44,8 @@ function preferencesForWorkspace(state: AppState, workspace: ProspectiveWorkspac
           )?.runtimeId
         }
       : null
-  return { desktop, owner }
+  const projectDefault = readProjectDefaultTuiAgent(state, workspace, executionHostId)
+  return { desktop, owner, projectDefault }
 }
 
 /** The current owner model map shares the existing availability fallback. */
@@ -52,14 +53,17 @@ export function readAgentLaunchPreferencesForWorkspace(
   state: AppState,
   workspace: ProspectiveWorkspace
 ): AgentLaunchPreferences {
-  const { desktop, owner } = preferencesForWorkspace(state, workspace)
+  const { desktop, owner, projectDefault } = preferencesForWorkspace(state, workspace)
   const snapshot = owner
     ? cachedSnapshot(
         owner.environmentId,
         snapshotKey(owner.environmentId, owner.pairingRevision, owner.runtimeId)
       )
     : null
-  return effectiveAgentLaunchPreferences(owner, desktop, snapshot)
+  return withProjectDefaultTuiAgent(
+    effectiveAgentLaunchPreferences(owner, desktop, snapshot),
+    projectDefault
+  )
 }
 
 export function readAgentLaunchPreferencesForWorktree(
@@ -80,9 +84,9 @@ export async function ensureAgentLaunchPreferences(
   if (signal?.aborted) {
     throw cancelled()
   }
-  const { desktop, owner } = preferencesForWorkspace(state, workspace)
+  const { desktop, owner, projectDefault } = preferencesForWorkspace(state, workspace)
   if (!owner) {
-    return desktop
+    return withProjectDefaultTuiAgent(desktop, projectDefault)
   }
   const entry = resource(owner)
   const { promise, resolve, reject } = Promise.withResolvers<Snapshot>()
@@ -101,7 +105,10 @@ export async function ensureAgentLaunchPreferences(
     if (signal?.aborted || !current(entry)) {
       throw cancelled()
     }
-    return effectiveAgentLaunchPreferences(owner, desktop, snapshot)
+    return withProjectDefaultTuiAgent(
+      effectiveAgentLaunchPreferences(owner, desktop, snapshot),
+      projectDefault
+    )
   } finally {
     signal?.removeEventListener('abort', listener)
     release()

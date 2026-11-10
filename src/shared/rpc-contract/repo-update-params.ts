@@ -1,3 +1,4 @@
+import { normalizeProjectDefaultTuiAgent } from '../agent-launch/catalog/project-default-tui-agent'
 import { z } from 'zod'
 import { normalizeRepoSourceControlAiOverrides } from '../source-control/ai/settings/source-control-ai-repo-settings'
 import { normalizeRepoBadgeColor } from '../repo-badge-color'
@@ -59,6 +60,7 @@ export function createRepoUpdateSchema<T extends Readonly<Record<string, z.ZodTy
       symlinkPaths: z.array(z.string()).optional(),
       issueSourcePreference: z.enum(['auto', 'upstream', 'origin']).optional(),
       defaultJiraProject: z.unknown().optional().transform(normalizeJiraProjectReference),
+      defaultTuiAgent: z.unknown().optional().transform(normalizeProjectDefaultTuiAgent),
       ghAccount: z
         .unknown()
         .optional()

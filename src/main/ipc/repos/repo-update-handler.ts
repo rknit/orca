@@ -9,6 +9,7 @@ import { getRepoExecutionHostId, normalizeExecutionHostId } from '../../../share
 import { normalizeRepoBadgeColor } from '../../../shared/repo-badge-color'
 import { sanitizeRepoIcon } from '../../../shared/repo-icon'
 import { normalizeGhAccountBinding } from '../../../shared/github/account-binding'
+import { normalizeProjectDefaultTuiAgent } from '../../../shared/agent-launch/catalog/project-default-tui-agent'
 import type { GhAccountBinding } from '../../../shared/github/account-binding'
 import { normalizeRepoSourceControlAiOverrides } from '../../../shared/source-control/ai/settings/source-control-ai-repo-settings'
 import {
@@ -63,6 +64,7 @@ export function registerRepoUpdateHandler(mainWindow: BrowserWindow, store: Stor
             | Repo['externalWorktreeDiscoverySuppressedAt']
             | null
           ghAccount?: GhAccountBinding | null
+          defaultTuiAgent?: Repo['defaultTuiAgent'] | null
         }
       }
     ): Promise<Repo | null> => {
@@ -100,6 +102,14 @@ export function registerRepoUpdateHandler(mainWindow: BrowserWindow, store: Stor
           } else {
             updates.ghAccount = normalized
           }
+        }
+      }
+      if ('defaultTuiAgent' in updates) {
+        const agent = normalizeProjectDefaultTuiAgent(updates.defaultTuiAgent)
+        if (agent === undefined) {
+          delete updates.defaultTuiAgent
+        } else {
+          updates.defaultTuiAgent = agent
         }
       }
       // Worktree materialization trims each path; reject malformed arrays at the IPC boundary.

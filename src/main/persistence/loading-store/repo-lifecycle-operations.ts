@@ -191,6 +191,7 @@ export class RepoLifecycleOperations {
       sourceControlAi?: Repo['sourceControlAi'] | null
       externalWorktreeDiscoverySuppressedAt?: Repo['externalWorktreeDiscoverySuppressedAt'] | null
       ghAccount?: GhAccountBinding | null
+      defaultTuiAgent?: Repo['defaultTuiAgent'] | null
     }
   ): Repo | null {
     return getRepoUpdateOperations(this).updateRepo(target, updates)
