@@ -176,14 +176,14 @@ function pageCanOwnHostArea(entries: readonly MobileWebPageRoute[], root: string
   )
 }
 
-// Require host-area ownership support on wide layouts to prevent old pages duplicating the native sidebar.
+// Require host-area ownership support on wide layouts to prevent old pages duplicating the native sidebar; host-less screens have no sidebar to duplicate.
 function servesWideLayout(
   entries: readonly MobileWebPageRoute[],
   pathname: string,
   wide: boolean
 ): boolean {
   const root = hostAreaRoot(pathname)
-  return !wide || (root !== null && pageCanOwnHostArea(entries, root))
+  return !wide || root === null || pageCanOwnHostArea(entries, root)
 }
 
 // Blame missing shell grants only if implementing every grant would serve the route; unreadable patterns cannot establish which app needs updating.

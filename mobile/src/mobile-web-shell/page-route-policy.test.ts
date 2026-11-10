@@ -135,3 +135,20 @@ describe('a route that declares an optional grant', () => {
     expect(pageRoutesOf(fromTheFuture)).toEqual([pathname])
   })
 })
+
+describe('a wide layout', () => {
+  const routes = [
+    { pathname: '/', grants: ['navigate', 'storage'] },
+    { pathname: '/h/[hostId]', grants: ['navigate', 'storage'], canOwnHostArea: true }
+  ]
+
+  it('serves a host-less screen with its grants', () => {
+    const view = routeViewOf(routes, '/', true)
+    expect(view.routeGrants).toEqual(['navigate', 'storage'])
+    expect(view.ownsHostArea).toBe(false)
+  })
+
+  it('still lets the host route own the host area', () => {
+    expect(routeViewOf(routes, '/h/host-1', true).ownsHostArea).toBe(true)
+  })
+})
