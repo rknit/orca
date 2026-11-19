@@ -135,8 +135,11 @@ export function createAcpModelCatalogProbe(
         : null
       try {
         assertStructuredAgentResolutionCurrent(operation)
-        const args =
-          folderArgs && folder ? [...launch.args, ...folderArgs(folder.path)] : launch.args
+        const args = [
+          ...launch.args,
+          ...(folderArgs && folder ? folderArgs(folder.path) : []),
+          ...(listing.listingArgs ?? [])
+        ]
         const result = await runAgentModelCatalogSession(
           () => (deps.connectSession ?? createAcpAgentConnection)({ ...launch, args }),
           (connection, ready) =>

@@ -83,6 +83,8 @@ export type AcpSessionModelDiscovery = {
   kind: 'session'
   listingNamesConfiguredModel: boolean
   sessionFolderArgs?(folder: string): string[]
+  /** Only for model-listing sessions; command catalogs keep the full chat startup. */
+  listingArgs?: readonly string[]
 }
 
 export function acpListingNeedsChatFolder(discovery: AcpModelDiscovery): boolean {
@@ -245,7 +247,9 @@ const OMP_LAUNCH_SPEC: AcpLaunchSpec = {
   modelDiscovery: {
     kind: 'session',
     listingNamesConfiguredModel: false,
-    sessionFolderArgs: (folder) => ['--session-dir', folder]
+    sessionFolderArgs: (folder) => ['--session-dir', folder],
+    // Loading skills makes OMP ask its default model to compress skill descriptions.
+    listingArgs: ['--no-skills']
   },
   visualsSkill: loadOmpVisualsSkill,
   compaction: true,

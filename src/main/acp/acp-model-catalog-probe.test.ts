@@ -481,7 +481,7 @@ describe('ACP model catalog probes', () => {
       const root = join(dataDirectory, 'acp-listing-sessions', 'omp')
       expect(launches).toEqual([
         expect.objectContaining({
-          args: ['acp', '--session-dir', expect.stringMatching(/run-/)]
+          args: ['acp', '--session-dir', expect.stringMatching(/run-/), '--no-skills']
         })
       ])
       expect(dirname(launches[0]!.args[2]!)).toBe(root)
