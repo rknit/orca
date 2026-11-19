@@ -20945,6 +20945,14 @@
       "label": "Jira project",
       "all": "All Jira projects"
     },
+    "RepositoryDefaultAgentSection": {
+      "description": "Default agent for new agents in this project. Overrides the host default.",
+      "inherit": "Use host default",
+      "keywordAgent": "agent",
+      "runtimeUpdate": "Update this runtime to save a project default agent.",
+      "saveFailed": "Could not save the default agent.",
+      "title": "Default Agent"
+    },
     "RepositoryJiraProjectSection": {
       "saveFailed": "Could not save the default Jira project.",
       "runtimeUpdate": "Update this runtime to save a default Jira project.",
